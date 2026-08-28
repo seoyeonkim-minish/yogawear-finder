@@ -57,6 +57,13 @@ body {
   will-change: transform, opacity;
 }
 
+/* The hero story's annotations are hidden until the scroll draws them — but
+   only when the scroll animation is actually going to run. Reduced motion and
+   a JS-less page both show them in place. */
+.js [data-story-copy] {
+  opacity: 0;
+}
+
 /* Before GSAP runs, anything it will animate in stays hidden — but only when
    JS is actually going to run, so the page still reads without it. */
 .js [data-reveal],
@@ -70,6 +77,10 @@ body {
 @media (prefers-reduced-motion: reduce) {
   [data-entrance-overlay] {
     display: none;
+  }
+
+  .js [data-story-copy] {
+    opacity: 1;
   }
 
   .js [data-reveal],
