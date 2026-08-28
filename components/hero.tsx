@@ -124,7 +124,6 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
       story
         .to(q("[data-hero-copy]"), { autoAlpha: 0.12, y: -40, ease: "none", duration: 0.2 }, 0.12)
         .to(q("[data-hero-media]"), { scale: 1.04, ease: "none", duration: 1 }, 0)
-        .to(q("[data-hero-back]"), { yPercent: -14, ease: "none", duration: 1 }, 0)
         .to(q("[data-hero-annotations]"), { yPercent: -4, ease: "none", duration: 1 }, 0)
         .to(q("[data-hero-turbulence]"), { attr: { baseFrequency: 0.002 }, ease: "none", duration: 1 }, 0)
         // Everything clears before the pin releases, so the next section arrives clean.
@@ -137,7 +136,6 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
         const x = e.clientX / window.innerWidth - 0.5;
         const y = e.clientY / window.innerHeight - 0.5;
         gsap.to(q("[data-hero-media]"), { x: x * 18, y: y * 12, duration: 1.2, ease: "power3.out", overwrite: "auto" });
-        gsap.to(q("[data-hero-back]"), { x: x * -34, duration: 1.4, ease: "power3.out", overwrite: "auto" });
       };
       if (fine) window.addEventListener("pointermove", onMove);
 
@@ -188,12 +186,74 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
         </filter>
       </svg>
 
-      <div
-        data-hero-back
-        className="pointer-events-none absolute -right-24 top-[10%] hidden h-[42vh] w-[18vw] md:block"
-      >
+        {/* The model fills the hero. The story still happens around her. */}
+      <div data-hero-media className="pointer-events-none absolute inset-0 -z-10 bg-beige">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={images[1]} alt="" className="h-full w-full rounded-sm object-cover opacity-[0.12]" />
+        <img
+          src={images[0]}
+          alt="요가 동작을 하는 모델"
+          className="h-full w-full object-cover object-[52%_34%] [filter:url(#fabric)]"
+        />
+        {/* Only over the copy: full-bleed photography and dark type do not
+            coexist, and dimming the whole frame would flatten the image. */}
+        <div className="absolute inset-0 bg-gradient-to-r from-ivory via-ivory/60 to-transparent md:w-3/5 md:via-ivory/30" />
+      </div>
+
+        <div data-hero-graphics className="pointer-events-none absolute inset-0 z-10">
+        {/* One viewBox for every line, so a path stays on the shoulder or the
+            waistband at any viewport size. */}
+        <svg
+          data-hero-annotations
+          className="absolute inset-0 h-full w-full overflow-visible"
+          viewBox="0 0 100 100"
+          fill="none"
+          preserveAspectRatio="none"
+          aria-hidden
+        >
+          <path
+            data-contour
+            d={CONTOUR}
+            stroke="var(--charcoal)"
+            strokeWidth={0.35}
+            strokeOpacity={0.35}
+            vectorEffect="non-scaling-stroke"
+          />
+          {SEQUENCES.map((s) => (
+            <path
+              key={s.index}
+              data-line={s.index}
+              d={s.path}
+              stroke="var(--charcoal)"
+              strokeWidth={0.35}
+              strokeOpacity={0.45}
+              vectorEffect="non-scaling-stroke"
+              className={s.mobile ? undefined : "hidden md:block"}
+            />
+          ))}
+        </svg>
+
+        {/* Desktop: annotations sit beside the model, where their lines end. */}
+        {SEQUENCES.map((s) => (
+          <div
+            key={s.index}
+            className={`absolute hidden w-[30%] max-w-[16rem] md:block ${
+              s.label.align === "right" ? "text-left" : "text-right"
+            }`}
+            style={{ left: `${s.label.x}%`, top: `${s.label.y}%` }}
+          >
+            <Annotation sequence={s} />
+          </div>
+        ))}
+
+        {/* Phones: stacked under the model instead. Beside it they cover the
+            pose and run off the edge, and the point is the movement. */}
+        <div className="absolute inset-x-6 bottom-10 space-y-5 md:hidden">
+          {SEQUENCES.filter((s) => s.mobile).map((s) => (
+            <div key={s.index}>
+              <Annotation sequence={s} />
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="relative mx-auto flex min-h-[100svh] w-full max-w-7xl flex-col px-6 py-16 md:px-10">
@@ -231,77 +291,6 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
           >
             Discover my flow
           </button>
-        </div>
-
-        {/* The model holds the centre; the story happens around her. */}
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div data-hero-media className="relative h-[54svh] w-[70vmin] md:h-[80svh] md:w-[min(52vmin,440px)]">
-            <div className="h-full w-full overflow-hidden rounded-sm bg-beige">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={images[0]}
-                alt="요가 동작을 하는 모델"
-                className="h-full w-full scale-115 object-cover [filter:url(#fabric)]"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div data-hero-graphics className="pointer-events-none absolute inset-0 z-10">
-          {/* One viewBox for every line, so a path stays on the shoulder or the
-              waistband at any viewport size. */}
-          <svg
-            data-hero-annotations
-            className="absolute left-1/2 top-1/2 h-[54svh] w-[70vmin] -translate-x-1/2 -translate-y-1/2 overflow-visible md:h-[80svh] md:w-[min(52vmin,440px)]"
-            viewBox="0 0 100 140"
-            fill="none"
-            preserveAspectRatio="xMidYMid meet"
-            aria-hidden
-          >
-            <path
-              data-contour
-              d={CONTOUR}
-              stroke="var(--charcoal)"
-              strokeWidth={0.35}
-              strokeOpacity={0.35}
-              vectorEffect="non-scaling-stroke"
-            />
-            {SEQUENCES.map((s) => (
-              <path
-                key={s.index}
-                data-line={s.index}
-                d={s.path}
-                stroke="var(--charcoal)"
-                strokeWidth={0.35}
-                strokeOpacity={0.45}
-                vectorEffect="non-scaling-stroke"
-                className={s.mobile ? undefined : "hidden md:block"}
-              />
-            ))}
-          </svg>
-
-          {/* Desktop: annotations sit beside the model, where their lines end. */}
-          {SEQUENCES.map((s) => (
-            <div
-              key={s.index}
-              className={`absolute hidden w-[30%] max-w-[16rem] md:block ${
-                s.label.align === "right" ? "text-left" : "text-right"
-              }`}
-              style={{ left: `${s.label.x}%`, top: `${s.label.y}%` }}
-            >
-              <Annotation sequence={s} />
-            </div>
-          ))}
-
-          {/* Phones: stacked under the model instead. Beside it they cover the
-              pose and run off the edge, and the point is the movement. */}
-          <div className="absolute inset-x-6 bottom-10 space-y-5 md:hidden">
-            {SEQUENCES.filter((s) => s.mobile).map((s) => (
-              <div key={s.index}>
-                <Annotation sequence={s} />
-              </div>
-            ))}
-          </div>
         </div>
 
         <div data-hero-scroll className="pointer-events-none absolute bottom-8 left-1/2 -translate-x-1/2">

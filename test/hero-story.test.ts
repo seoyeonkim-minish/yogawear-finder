@@ -24,12 +24,19 @@ test("sequences run in order and overlap only enough to feel continuous", () => 
   }
 });
 
-test("indices and copy are unique, and sides alternate", () => {
+test("indices and copy are unique, and annotations clear the model", () => {
   assert.equal(new Set(SEQUENCES.map((s) => s.index)).size, SEQUENCES.length);
   assert.equal(new Set(SEQUENCES.map((s) => s.title)).size, SEQUENCES.length);
-  const sides = SEQUENCES.map((s) => s.label.align);
-  for (let i = 1; i < sides.length; i++) {
-    assert.notEqual(sides[i], sides[i - 1], "annotations must not stack on one side");
+
+  // The full-bleed crop puts the model in the left third, so every annotation
+  // sits to her right and they step down the page instead of stacking.
+  const ys = SEQUENCES.map((s) => s.label.y);
+  for (const s of SEQUENCES) {
+    assert.ok(s.label.x > 50, `${s.index} sits at x=${s.label.x}, over the model`);
+    assert.ok(s.label.x < 85, `${s.index} sits at x=${s.label.x}, off the right edge`);
+  }
+  for (let i = 1; i < ys.length; i++) {
+    assert.ok(ys[i] - ys[i - 1] >= 12, `${SEQUENCES[i].index} crowds the annotation above it`);
   }
 });
 
@@ -41,14 +48,19 @@ test("copy stays on movement and never on the body", () => {
   }
 });
 
-test("every path is drawable and starts on the model, not off-frame", () => {
+test("every path is drawable, starts on the model and ends before its label", () => {
   for (const { index, path } of SEQUENCES) {
     assert.match(path, /^M [\d.]+ [\d.]+/, `${index}: no move-to`);
     const [x, y] = path.slice(2).split(" ").map(Number);
-    // The model is cropped left of centre in this photograph, so a line can
-    // legitimately start near the left edge — it may not start outside it.
-    assert.ok(x > 5 && x < 95, `${index}: starts at x=${x}, off the body`);
-    assert.ok(y > 10 && y < 130, `${index}: starts at y=${y}, outside the frame`);
+    // Lines start on the model, who occupies the left third of the crop.
+    assert.ok(x > 20 && x < 50, `${index}: starts at x=${x}, not on the model`);
+    assert.ok(y > 5 && y < 95, `${index}: starts at y=${y}, outside the frame`);
+  }
+  // Each line has to reach out towards its annotation without running under it.
+  for (const s of SEQUENCES) {
+    const end = Number(s.path.trim().split(/[\s,]+/).at(-2));
+    assert.ok(end < s.label.x, `${s.index}: line ends at ${end}, under the label at ${s.label.x}`);
+    assert.ok(s.label.x - end < 12, `${s.index}: line stops ${s.label.x - end} short of its label`);
   }
   assert.match(CONTOUR, /^M /);
   assert.ok(CONTOUR_RANGE[0] < SEQUENCES[0].range[0], "the contour must begin before the first annotation");
