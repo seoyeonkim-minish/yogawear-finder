@@ -121,6 +121,95 @@ function genderOf(hay, hint) {
 const baseName = (t) =>
   t.replace(/^\[[^\]]*\]\s*/, "").split(/\s+[-–—]\s+|\s*\|\s*|\s*\(\d+\s*colou?rs?\)/i)[0].trim();
 
+// ---------------------------------------------------- derived shopping traits
+// Practice / fit / proportions / performance attributes are in no source payload
+// (and no amount of crawling produces them), so they are derived from what we do
+// have: fabric, garment type, season and the words the brand put in the title.
+// They drive the Discover -> Recommend flow, so they are ranking signals, not facts.
+
+const FIT_RULES = [
+  ["high support", ["high support", "high impact", "max support", "power", "run ", "running", "하이서포트", "고강도"]],
+  ["compression", ["compress", "compressive", "firm", "shaping", "shape ", "보정", "압박", "코어"]],
+  ["sculpted", ["sculpt", "airlift", "airbrush", "skinluxe", "seamless", "second skin", "slim", "contour", "bodysuit", "심리스", "슬림", "탄탄"]],
+  ["relaxed", ["oversize", "oversized", "relaxed", "loose", "wide", "harem", "lounge", "boyfriend", "baggy", "flare", "와이드", "루즈", "오버핏", "하렘", "부츠컷"]],
+];
+const FIT_BY_CATEGORY = {
+  leggings: "sculpted", bra: "sculpted", shorts: "sculpted",
+  top: "relaxed", outer: "relaxed", pants: "relaxed", set: "sculpted", dress: "relaxed",
+};
+
+const BREATHABLE = ["cotton", "organic cotton", "modal", "tencel", "linen", "bamboo", "rayon"];
+const SYNTHETIC = ["polyester", "recycled polyester", "nylon", "recycled nylon"];
+const SOFT = ["modal", "tencel", "cotton", "organic cotton", "bamboo", "cupro", "silk"];
+
+// Half the catalogue has no published fibre list. Rather than let those products
+// fall out of every recommendation, assume what the garment type guarantees:
+// activewear leggings/bras/shorts stretch and are synthetic. Nothing else is assumed.
+const ASSUMED_BY_CATEGORY = {
+  leggings: ["stretch", "quick dry"],
+  bra: ["stretch", "quick dry"],
+  shorts: ["stretch", "quick dry"],
+  set: ["stretch"],
+};
+
+function attributesOf(material, category, season, fit, hay) {
+  const has = (list) => material.some((m) => list.includes(m));
+  const a = new Set(material.length ? [] : (ASSUMED_BY_CATEGORY[category] ?? []));
+  if (!material.length && (a.has("stretch") && (fit === "compression" || fit === "sculpted"))) a.add("high stretch");
+  if (!material.length && fit === "relaxed") a.add("comfort");
+  if (has(BREATHABLE) || hay.includes("mesh") || hay.includes("메쉬")) a.add("breathable");
+  if (has(SYNTHETIC)) a.add("quick dry");
+  if (has(SOFT)) a.add("soft touch");
+  if (material.includes("elastane")) a.add("stretch");
+  if (material.includes("elastane") && (fit === "compression" || fit === "sculpted")) a.add("high stretch");
+  if (fit === "compression" || fit === "high support") a.add("secure fit");
+  if (fit === "relaxed") a.add("comfort");
+  if (material.includes("nylon") || material.includes("recycled nylon")) a.add("durability");
+  if (season.includes("summer") || category === "shorts" || hay.includes("light") || hay.includes("냉감")) a.add("lightweight");
+  if (season.includes("winter")) a.add("warm");
+  return [...a];
+}
+
+// A product suits a practice when it carries what that practice demands.
+const PRACTICE_NEEDS = {
+  Vinyasa: ["stretch", "breathable"],
+  Ashtanga: ["high stretch", "secure fit"],
+  "Hot Yoga": ["quick dry", "lightweight"],
+  "Yin Yoga": ["soft touch", "comfort"],
+  Hatha: ["breathable", "comfort"],
+  Pilates: ["stretch", "secure fit"],
+};
+
+function practiceOf(attributes, category, season) {
+  const out = Object.entries(PRACTICE_NEEDS)
+    .filter(([, needs]) => needs.every((n) => attributes.includes(n)))
+    .map(([name]) => name);
+  // A winter piece is not what anyone wears to hot yoga.
+  return season.length === 1 && season[0] === "winter" ? out.filter((x) => x !== "Hot Yoga") : out;
+}
+
+const PROPORTION_WORDS = {
+  Tall: ["tall", "long length", "롱버전", "롱기장", "키큰"],
+  Petite: ["petite", "cropped length", "short length", "숏기장", "숏버전"],
+  Curvy: ["curve", "curvy", "plus size", "extended size", "빅사이즈"],
+  Athletic: ["athletic fit", "muscle", "broad", "애슬릿"],
+};
+const proportionsOf = (hay) =>
+  Object.entries(PROPORTION_WORDS).filter(([, ws]) => ws.some((w) => hay.includes(w))).map(([k]) => k);
+
+function deriveTraits(p, hay) {
+  const fit = FIT_RULES.find(([, ws]) => ws.some((w) => hay.includes(w)))?.[0]
+    ?? FIT_BY_CATEGORY[p.category] ?? "relaxed";
+  const attributes = attributesOf(p.material, p.category, p.season, fit, hay);
+  return {
+    ...p,
+    fit,
+    attributes,
+    practice: practiceOf(attributes, p.category, p.season),
+    proportions: proportionsOf(hay),
+  };
+}
+
 // ------------------------------------------------------- source 1: Shopify API
 
 const SHOPIFY = [
@@ -192,7 +281,7 @@ function mapShopify(p) {
 
   const material = materialOf(p._brand, hay);
   const name = baseName(p.title);
-  return {
+  return deriveTraits({
     id: slug(`${p._brand}-${name}`),
     brand: p._brand,
     name,
@@ -206,7 +295,7 @@ function mapShopify(p) {
     image,
     url: `https://${p._host}/products/${p.handle}`,
     source: "brand",
-  };
+  }, hay);
 }
 
 // ---------------------------------------------- source 2: 29CM search (Korean)
@@ -254,7 +343,7 @@ function map29cm(p) {
 
   const material = materialOf(brand, hay);
   const name = baseName(p.itemName);
-  return {
+  return deriveTraits({
     id: slug(`29cm-${brand}-${name}-${p.itemNo}`),
     brand,
     name,
@@ -268,7 +357,7 @@ function map29cm(p) {
     image: `https://img.29cm.co.kr${p.imageUrl}?width=600`,
     url: `https://www.29cm.co.kr/products/${p.itemNo}`,
     source: "29cm",
-  };
+  }, hay);
 }
 
 // -------------------------------------- 29CM material enrichment (product page)
@@ -341,6 +430,7 @@ async function enrich29cm(products) {
     if (fibers.length) {
       p.material = fibers;
       p.season = seasonOf(fibers, p.category, norm(p.name));
+      Object.assign(p, deriveTraits(p, norm(p.name)));
       hits++;
     }
   }
@@ -422,6 +512,9 @@ console.log(`  brands: ${new Set(products.map((p) => p.brand)).size}`);
 console.log(`  material: ${pct(count((p) => p.material.length))} tagged`);
 console.log(`  gender: women ${count((p) => p.gender === "women")} / men ${count((p) => p.gender === "men")} / unisex ${count((p) => p.gender === "unisex")}`);
 console.log(`  currency: ${[...new Set(products.map((p) => p.currency))].map((c) => `${c} ${count((p) => p.currency === c)}`).join(" / ")}`);
+console.log(`  fit: ${["relaxed", "sculpted", "compression", "high support"].map((f) => `${f} ${count((p) => p.fit === f)}`).join(" / ")}`);
+console.log(`  practice tagged: ${count((p) => p.practice.length)} (${pct(count((p) => p.practice.length))})`);
+console.log(`  proportions tagged: ${count((p) => p.proportions.length)}`);
 console.log(`  source: brand ${count((p) => p.source === "brand")} / 29cm ${count((p) => p.source === "29cm")}`);
 
 const holes = new Map();

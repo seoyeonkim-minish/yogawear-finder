@@ -1,5 +1,9 @@
 import raw from "../data/products.json" with { type: "json" };
 
+export type Fit = "relaxed" | "sculpted" | "compression" | "high support";
+export type Practice = "Hatha" | "Vinyasa" | "Ashtanga" | "Hot Yoga" | "Yin Yoga" | "Pilates";
+export type Proportion = "Petite" | "Tall" | "Curvy" | "Athletic";
+
 export type Product = {
   id: string;
   brand: string;
@@ -14,83 +18,221 @@ export type Product = {
   image: string;
   url: string;
   source: "brand" | "29cm";
+  fit: Fit;
+  attributes: string[];
+  practice: Practice[];
+  proportions: Proportion[];
 };
 
 export const products = raw as Product[];
 
-export const FACETS = ["material", "season", "gender", "category", "brand"] as const;
-export type Facet = (typeof FACETS)[number];
+/* -------------------------------------------------------------------------
+ * Your Flow vs Filters.
+ * Flow is what the guided discovery learned about the person; it ranks.
+ * Filters are conditions they added while browsing; they exclude.
+ * Both live in the URL so a result is shareable and the back button works.
+ * ---------------------------------------------------------------------- */
 
-/** Selected values per facet. Empty/missing array = no constraint on that facet. */
-export type Filters = Partial<Record<Facet, string[]>>;
+export const FLOW_KEYS = ["practice", "fit", "season"] as const;
+export const FILTER_KEYS = ["gender", "material", "category", "brand", "proportions"] as const;
+export type FlowKey = (typeof FLOW_KEYS)[number];
+export type FilterKey = (typeof FILTER_KEYS)[number];
+export type Key = FlowKey | FilterKey;
 
-const valuesOf = (p: Product, f: Facet): string[] => {
-  const v = p[f];
-  return Array.isArray(v) ? v : [v];
+export type Selection = Partial<Record<Key, string[]>>;
+
+const valuesOf = (p: Product, k: Key): string[] => {
+  const v = p[k as keyof Product];
+  return Array.isArray(v) ? (v as string[]) : [String(v)];
 };
 
-/** AND across facets, OR within a facet. */
-export function filterProducts(list: Product[], filters: Filters): Product[] {
+export const hasFlow = (s: Selection) => FLOW_KEYS.some((k) => s[k]?.length);
+export const hasFilters = (s: Selection) => FILTER_KEYS.some((k) => s[k]?.length);
+
+/** Filters exclude: AND across keys, OR within a key. Flow never excludes. */
+export function applyFilters(list: Product[], s: Selection): Product[] {
   return list.filter((p) =>
-    FACETS.every((f) => {
-      const selected = filters[f];
+    FILTER_KEYS.every((k) => {
+      const selected = s[k];
       if (!selected?.length) return true;
-      return valuesOf(p, f).some((v) => selected.includes(v));
+      return valuesOf(p, k).some((v) => selected.includes(v));
     }),
   );
 }
 
-/** Distinct values of a facet with counts, for rendering the filter UI. */
-export function facetOptions(list: Product[], f: Facet): { value: string; count: number }[] {
+/* ------------------------------------------------------ recommendation weight */
+
+/** What each practice asks of a garment. Mirrors PRACTICE_NEEDS in scripts/crawl.mjs. */
+const PRACTICE_WANTS: Record<Practice, string[]> = {
+  Vinyasa: ["stretch", "breathable", "high stretch"],
+  Ashtanga: ["high stretch", "secure fit", "durability"],
+  "Hot Yoga": ["quick dry", "lightweight", "breathable"],
+  "Yin Yoga": ["soft touch", "comfort"],
+  Hatha: ["breathable", "comfort", "soft touch"],
+  Pilates: ["stretch", "secure fit", "sculpted"],
+};
+
+const SEASON_WANTS: Record<string, string[]> = {
+  summer: ["lightweight", "breathable", "quick dry"],
+  winter: ["warm", "soft touch"],
+  spring: ["breathable", "comfort"],
+  fall: ["comfort", "soft touch"],
+};
+
+/**
+ * Score, not filter. A flow answer lifts matching products to the top; it never
+ * removes anything, so a narrow answer still leaves a full page to browse.
+ */
+export function score(p: Product, s: Selection): number {
+  let n = 0;
+  for (const practice of s.practice ?? []) {
+    if (p.practice.includes(practice as Practice)) n += 4;
+    const wants = PRACTICE_WANTS[practice as Practice] ?? [];
+    n += wants.filter((w) => p.attributes.includes(w) || p.fit === w).length;
+  }
+  for (const fit of s.fit ?? []) {
+    if (p.fit === fit) n += 4;
+    else if (fit === "compression" && p.fit === "high support") n += 2;
+    else if (fit === "sculpted" && p.fit === "compression") n += 2;
+  }
+  for (const season of s.season ?? []) {
+    if (season === "all") { n += p.season.length >= 3 ? 3 : 1; continue; }
+    if (p.season.includes(season)) n += 3;
+    n += (SEASON_WANTS[season] ?? []).filter((w) => p.attributes.includes(w)).length;
+  }
+  return n;
+}
+
+/**
+ * Filters exclude, then flow ranks. Products that score the same are spread
+ * across brands rather than left in id order — otherwise one brand's whole
+ * catalogue lands at the top and a curated page reads like a brand page.
+ */
+export function recommend(s: Selection): Product[] {
+  const list = applyFilters(products, s);
+  if (!hasFlow(s)) return list;
+
+  const tiers = new Map<number, Product[]>();
+  for (const p of list) {
+    const n = score(p, s);
+    (tiers.get(n) ?? tiers.set(n, []).get(n)!).push(p);
+  }
+  return [...tiers.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .flatMap(([, tier]) => spreadByBrand(tier));
+}
+
+/** One product per brand per pass, in a stable order. */
+function spreadByBrand(tier: Product[]): Product[] {
+  const byBrand = new Map<string, Product[]>();
+  for (const p of [...tier].sort((a, b) => a.id.localeCompare(b.id))) {
+    (byBrand.get(p.brand) ?? byBrand.set(p.brand, []).get(p.brand)!).push(p);
+  }
+  const queues = [...byBrand.values()];
+  const out: Product[] = [];
+  for (let i = 0; out.length < tier.length; i++) {
+    for (const q of queues) if (q[i]) out.push(q[i]);
+  }
+  return out;
+}
+
+/** The one or two reasons this product surfaced, for the card and the detail page. */
+export function reasons(p: Product, s: Selection): string[] {
+  const out: string[] = [];
+  for (const practice of s.practice ?? []) {
+    if (p.practice.includes(practice as Practice)) out.push(`Best for ${practice}`);
+  }
+  if (s.fit?.includes(p.fit)) out.push(FIT_KO[p.fit]);
+  for (const a of ["quick dry", "breathable", "high stretch", "warm", "lightweight"]) {
+    if (out.length >= 2) break;
+    if (p.attributes.includes(a)) out.push(ATTR_KO[a] ?? a);
+  }
+  return out.slice(0, 2);
+}
+
+/* ------------------------------------------------------------------- options */
+
+export function optionsFor(list: Product[], k: Key): { value: string; count: number }[] {
   const counts = new Map<string, number>();
-  for (const p of list) for (const v of valuesOf(p, f)) counts.set(v, (counts.get(v) ?? 0) + 1);
+  for (const p of list) for (const v of valuesOf(p, k)) counts.set(v, (counts.get(v) ?? 0) + 1);
   return [...counts]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ko"))
     .map(([value, count]) => ({ value, count }));
 }
 
-/** URLSearchParams -> Filters. Repeated params (?material=linen&material=wool) are the selection. */
-export function filtersFromParams(params: Record<string, string | string[] | undefined>): Filters {
-  const out: Filters = {};
-  for (const f of FACETS) {
-    const v = params[f];
+export function selectionFromParams(params: Record<string, string | string[] | undefined>): Selection {
+  const out: Selection = {};
+  for (const k of [...FLOW_KEYS, ...FILTER_KEYS]) {
+    const v = params[k];
     if (!v) continue;
-    out[f] = Array.isArray(v) ? v : [v];
+    out[k] = Array.isArray(v) ? v : [v];
   }
   return out;
 }
 
-/** Href with one facet value toggled — filter links are plain <a>, no client state. */
-export function toggleHref(filters: Filters, f: Facet, value: string): string {
+export function toQuery(s: Selection): string {
   const sp = new URLSearchParams();
-  for (const key of FACETS) {
-    const selected = key === f ? toggle(filters[f] ?? [], value) : (filters[key] ?? []);
-    for (const v of selected) sp.append(key, v);
-  }
+  for (const k of [...FLOW_KEYS, ...FILTER_KEYS]) for (const v of s[k] ?? []) sp.append(k, v);
   const q = sp.toString();
   return q ? `/?${q}` : "/";
 }
 
-const toggle = (arr: string[], v: string) =>
-  arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
+/** Href with one value toggled — every filter control is a plain link. */
+export function toggleHref(s: Selection, k: Key, value: string): string {
+  const current = s[k] ?? [];
+  const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+  return toQuery({ ...s, [k]: next });
+}
+
+/** Clearing filters must not clear what discovery learned. */
+export const clearFiltersHref = (s: Selection) =>
+  toQuery(Object.fromEntries(FLOW_KEYS.map((k) => [k, s[k] ?? []])));
+
+/* -------------------------------------------------------------------- labels */
 
 const SYMBOL = { KRW: "₩", USD: "$", GBP: "£" } as const;
-
-/** Prices come from several markets; never render them as one number. */
 export const formatPrice = (p: Product) =>
   `${SYMBOL[p.currency]}${p.price.toLocaleString(p.currency === "KRW" ? "ko-KR" : "en-US")}`;
 
-export const LABEL: Record<Facet, string> = {
-  material: "소재",
-  season: "계절",
-  gender: "성별",
-  category: "종류",
-  brand: "브랜드",
+export const FIT_KO: Record<string, string> = {
+  relaxed: "여유 있게",
+  sculpted: "몸에 맞게",
+  compression: "탄탄하게",
+  "high support": "강한 지지",
 };
-
-/** Facet values are stored in English so the data stays one language; the UI is Korean. */
+export const FIT_HINT: Record<string, string> = {
+  relaxed: "부드럽고 편안한 움직임",
+  sculpted: "몸에 붙되 매끄러운 착용감",
+  compression: "단단하게 잡아주는 핏",
+  "high support": "격한 움직임을 위한 지지력",
+};
+export const PRACTICE_HINT: Record<string, string> = {
+  Hatha: "느리게 · 기본에 충실하게",
+  Vinyasa: "흐르듯 · 활동적으로",
+  Ashtanga: "역동적 · 구조적 · 강하게",
+  "Hot Yoga": "고온 · 땀 · 빠른 건조",
+  "Yin Yoga": "천천히 · 회복 · 이완",
+  Pilates: "코어 · 정교한 컨트롤",
+};
+export const SEASON_HINT: Record<string, string> = {
+  spring: "가볍게 · 레이어드",
+  summer: "얇게 · 통기성",
+  fall: "적당히 · 데일리",
+  winter: "따뜻하게 · 레이어드",
+  all: "사계절 · 데일리",
+};
+export const ATTR_KO: Record<string, string> = {
+  breathable: "통기성", "quick dry": "빠른 건조", stretch: "신축성",
+  "high stretch": "높은 신축성", "secure fit": "안정적인 지지", "soft touch": "부드러운 촉감",
+  comfort: "편안함", durability: "내구성", lightweight: "가벼움", warm: "보온",
+};
+export const LABEL: Record<Key, string> = {
+  practice: "Practice", fit: "Fit", season: "Season",
+  gender: "Gender", material: "Material", category: "Category",
+  brand: "Brand", proportions: "Proportions",
+};
 export const VALUE_KO: Record<string, string> = {
-  spring: "봄", summer: "여름", fall: "가을", winter: "겨울",
+  spring: "봄", summer: "여름", fall: "가을", winter: "겨울", all: "사계절",
   women: "여성", men: "남성", unisex: "공용",
   leggings: "레깅스", top: "상의", bra: "브라", shorts: "쇼츠", pants: "팬츠",
   outer: "아우터", set: "세트", dress: "원피스·스커트",
@@ -99,5 +241,23 @@ export const VALUE_KO: Record<string, string> = {
   elastane: "스판덱스", modal: "모달", tencel: "텐셀", linen: "린넨", wool: "울",
   "merino wool": "메리노 울", rayon: "레이온", acrylic: "아크릴", bamboo: "대나무",
   cupro: "큐프라", acetate: "아세테이트", silk: "실크", "recycled cotton": "리사이클 코튼",
+  Petite: "쁘띠", Tall: "톨", Curvy: "커비", Athletic: "애슬레틱",
+  ...FIT_KO,
 };
 export const ko = (v: string) => VALUE_KO[v] ?? v;
+
+/** Material characteristics, shown in the material dropdown. */
+export const MATERIAL_HINT: Record<string, string> = {
+  modal: "부드럽고 통기성 좋은",
+  "recycled nylon": "신축성과 퍼포먼스",
+  bamboo: "부드럽고 체온 조절",
+  cotton: "편안한 데일리",
+  "organic cotton": "부드럽고 자극 적은",
+  linen: "가볍고 시원한",
+  polyester: "빠른 건조",
+  "recycled polyester": "빠른 건조 · 리사이클",
+  nylon: "매끄럽고 튼튼한",
+  tencel: "시원하고 부드러운",
+  elastane: "신축성",
+  wool: "보온",
+};

@@ -1,7 +1,27 @@
 # Amadi
 
-요가 브랜드를 가로질러 요가웨어를 **소재 / 계절 / 성별 / 종류 / 브랜드**로 탐색하는 카탈로그.
-현재 2,900개+ 상품, 97개 브랜드 (해외 10곳 + 29CM 경유 한국 브랜드).
+요가웨어를 **Discover → Recommend → Refine** 흐름으로 찾는 카탈로그.
+2,900개+ 상품, 97개 브랜드 (해외 10곳 + 29CM 경유 한국 브랜드).
+
+첫 진입에서 필터를 보여주지 않는다. 세 가지 질문(수련 / 착용감 / 계절)으로
+사용자의 flow를 받고, 그에 맞는 순서로 상품을 보여준 뒤, 원할 때 조건을 더한다.
+
+## Your Flow와 Filters는 다른 것이다
+
+| | 출처 | 하는 일 |
+|---|---|---|
+| **Your Flow** (`practice`, `fit`, `season`) | Guided Discovery | **순위를 매긴다.** 하나도 걸러내지 않는다 |
+| **Filters** (`gender`, `material`, `category`, `brand`, `proportions`) | 상단 필터 바 | **걸러낸다.** 패싯 간 AND, 패싯 내 OR |
+
+이 구분이 UI에도 그대로 있다. `Clear filters`는 Filters만 지우고 Your Flow는 남긴다
+(테스트가 강제). `Refine my flow`는 초기화가 아니라 기존 답이 선택된 상태로
+Discovery를 다시 여는 것이다.
+
+둘 다 URL에 있어서 결과 페이지는 공유 가능하고 뒤로가기가 동작한다.
+동점 상품은 브랜드별 라운드로빈으로 섞는다 — 안 그러면 한 브랜드 카탈로그가 상단을 덮는다.
+
+체형(Petite / Tall / Curvy / Athletic)은 첫 Discovery에서 묻지 않는다.
+`Find your fit`에서 사용자가 원할 때 선택하는 Optional Filter다.
 
 ## 실행
 
@@ -20,9 +40,13 @@ npm run build
 | `scripts/crawl.mjs` | 수집. 소스 2개, 매핑·소재·계절·성별 판정이 모두 여기 |
 | `data/products.json` | 커밋되는 산출물. 앱은 이 파일만 읽음 |
 | `data/materials.json` | 해외 브랜드 원단 라인 → 섬유 매핑 (손으로 유지) |
-| `lib/products.ts` | 타입, 필터링(패싯 간 AND / 패싯 내 OR), 패싯 집계, 통화 표기, 한글 라벨 |
-| `app/page.tsx` | 필터 그리드. 필터 상태는 URL searchParams — 클라이언트 상태 없음 |
-| `app/product/[id]/page.tsx` | 상세. `generateStaticParams`로 SSG |
+| `lib/products.ts` | 타입, flow 랭킹(`score`/`recommend`), 필터, 추천 이유, 라벨 |
+| `app/page.tsx` | 랜딩(flow 없음) / 결과(flow 있음) 두 상태 |
+| `components/discovery.tsx` | 3단계 Guided Discovery. 유일한 상태 보유 컴포넌트 |
+| `components/filter-bar.tsx` | 상단 필터 바. 네이티브 `<details>` 팝오버 + 링크, 클라이언트 상태 없음 |
+| `components/product-card.tsx` | 추천 이유 태그가 붙는 카드 |
+| `components/wishlist.tsx` | localStorage 위시리스트 (뷰어 로컬 전용) |
+| `app/product/[id]/page.tsx` | 상세 + "Why it fits your flow" |
 | `test/filter.test.ts` | `node:test`, 프레임워크 없음 |
 
 ## 데이터 출처와 한계
@@ -35,7 +59,12 @@ Lululemon(403)·Athleta·prAna·Vuori·젝시믹스는 엔드포인트가 없어
 **소스 2 — 29CM 공개 검색 API.** 한국 브랜드 88곳을 한 소스로 커버. 브랜드 사이트를
 따로 긁는 대신 이쪽을 쓴 이유는 한국 D2C가 대부분 Cafe24/자체몰이라 공개 JSON이 없기 때문.
 
-세 필드는 어느 소스도 그냥 주지 않아서 이렇게 채운다:
+**Practice / Fit / Proportions / 성능 속성은 어느 소스에도 없다.** 더 긁어도 안 나온다.
+그래서 가진 것(소재 · 품목 · 계절 · 상품명)에서 파생시키고, 그 값을 추천 가중치로 쓴다
+(`scripts/crawl.mjs`의 derived shopping traits). 사실이 아니라 랭킹 신호다.
+소재 미상 상품은 품목이 보장하는 것만 가정한다 — 레깅스·브라는 신축성이 있다.
+
+나머지 세 필드도 소스가 그냥 주지 않아서 이렇게 채운다:
 
 - **소재 (전체 50%)** — Shopify 페이로드에는 사실상 없다(측정 0~45%, 4개 브랜드 중 3개는
   상세페이지에서 JS로 렌더링). 그래서 해외는 상품명에 들어 있는 원단 라인명(Spacedye,
