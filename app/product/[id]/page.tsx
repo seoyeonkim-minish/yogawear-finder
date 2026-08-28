@@ -34,7 +34,7 @@ export default async function ProductPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-12 md:px-10">
-      <Link href="/" className="eyebrow text-gray hover:text-charcoal">
+      <Link href="/#products" className="eyebrow text-gray hover:text-charcoal">
         ← Amadi
       </Link>
 

@@ -39,20 +39,23 @@ const STEPS = [
 
 /**
  * One component, two placements:
- *   inline — first visit, sitting in the page directly under the hero, so the
- *            hero's last frame is Discover's first frame.
- *   modal  — "Refine my flow", where the point is to keep the browsing context.
+ *   overlay — opened from the hero CTA. Full screen, hero image still faintly
+ *             behind it, so answering the questions stays a brand moment.
+ *   drawer  — "Refine my flow", where the point is to keep the browsing context.
  * Either way the answers are staged locally and only committed to the URL on
- * the final CTA, so a half-finished edit never disturbs the results behind it.
+ * the final CTA, so a half-finished edit never disturbs what is behind it.
  */
 export function Discovery({
   selection,
   variant,
+  backdrop,
   onClose,
   onStepChange,
 }: {
   selection: Selection;
-  variant: "inline" | "modal";
+  variant: "overlay" | "drawer";
+  /** Kept faintly behind the overlay so discovery still feels like the hero. */
+  backdrop?: string;
   onClose?: () => void;
   onStepChange?: (step: number) => void;
 }) {
@@ -69,7 +72,7 @@ export function Discovery({
   useEffect(() => onStepChange?.(step), [step, onStepChange]);
 
   useEffect(() => {
-    if (variant !== "modal") return;
+    if (!variant) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose?.();
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
@@ -95,7 +98,7 @@ export function Discovery({
   };
 
   const submit = () => {
-    router.push(toQuery({ ...selection, ...draft }));
+    router.push(toQuery({ ...selection, ...draft }, { flow: true }));
     onClose?.();
   };
 
@@ -115,11 +118,9 @@ export function Discovery({
             </span>
           ))}
         </p>
-        {variant === "modal" && (
-          <button onClick={onClose} className="eyebrow text-gray hover:text-charcoal">
-            Close
-          </button>
-        )}
+        <button onClick={onClose} className="eyebrow text-gray hover:text-charcoal">
+          Close
+        </button>
       </div>
 
       <h2 className="display mt-8 text-[clamp(2rem,5vw,3.5rem)] leading-tight">{s.title}</h2>
@@ -152,8 +153,7 @@ export function Discovery({
       <div className="mt-12 flex items-center justify-between gap-4">
         <button
           onClick={() => (step === 0 ? onClose?.() : go(step - 1))}
-          className="eyebrow text-gray hover:text-charcoal disabled:opacity-30"
-          disabled={step === 0 && variant === "inline"}
+          className="eyebrow text-gray hover:text-charcoal"
         >
           ← Back
         </button>
@@ -161,13 +161,13 @@ export function Discovery({
           onClick={() => (last ? submit() : go(step + 1))}
           className="rounded-full bg-charcoal px-8 py-4 text-sm text-ivory transition-colors hover:bg-ink"
         >
-          {last ? (variant === "modal" ? "Update recommendations" : "See my edit") : "Next"}
+          {last ? (variant === "drawer" ? "Update recommendations" : "Show my flow") : "Next"}
         </button>
       </div>
     </div>
   );
 
-  if (variant === "modal") {
+  if (variant === "drawer") {
     return (
       <div className="fixed inset-0 z-50 flex justify-end bg-ink/25" onClick={onClose}>
         <div
@@ -182,7 +182,20 @@ export function Discovery({
     );
   }
 
-  return <div className="mx-auto w-full max-w-2xl">{body}</div>;
+  return (
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 overflow-y-auto bg-ivory">
+      {backdrop && (
+        <div className="pointer-events-none absolute inset-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={backdrop} alt="" className="h-full w-full object-cover opacity-[0.14]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-ivory via-ivory/85 to-transparent" />
+        </div>
+      )}
+      <div className="relative mx-auto flex min-h-full w-full max-w-3xl flex-col justify-center px-6 py-16 md:px-10">
+        {body}
+      </div>
+    </div>
+  );
 }
 
 /** "Refine my flow" — the drawer variant, so the grid behind it stays visible. */
@@ -201,7 +214,7 @@ export function RefineTrigger({
       <button onClick={() => setOpen(true)} className={className}>
         {label}
       </button>
-      {open && <Discovery selection={selection} variant="modal" onClose={() => setOpen(false)} />}
+      {open && <Discovery selection={selection} variant="drawer" onClose={() => setOpen(false)} />}
     </>
   );
 }

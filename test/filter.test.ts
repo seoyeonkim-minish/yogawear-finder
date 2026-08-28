@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   FILTER_KEYS, FLOW_KEYS, applyFilters, clearFiltersHref, formatPrice, hasFlow,
-  optionsFor, products, reasons, recommend, score, selectionFromParams, toggleHref,
-  type Product, type Selection,
+  isPersonalized, optionsFor, products, reasons, recommend, score,
+  selectionFromParams, toggleHref, toQuery, type Product, type Selection,
 } from "../lib/products.ts";
 
 const SEASONS = ["spring", "summer", "fall", "winter"];
@@ -145,4 +145,45 @@ test("ranking is deterministic — the same flow gives the same order", () => {
     recommend(flow).slice(0, 20).map((p) => p.id),
     recommend(flow).slice(0, 20).map((p) => p.id),
   );
+});
+
+/* --------------------------------- the two discovery paths are distinct ---- */
+
+test("a practice card and a completed discovery produce different states", () => {
+  // Quick path: a card sets only the practice and never claims to be personal.
+  const quick = new URL(toQuery({ practice: ["Vinyasa"] }), "http://x");
+  assert.equal(quick.searchParams.get("flow"), null);
+  assert.ok(!isPersonalized(Object.fromEntries(quick.searchParams)));
+
+  // Personalised path: discovery marks the answers as its own.
+  const flow = new URL(
+    toQuery({ practice: ["Vinyasa"], fit: ["sculpted"], season: ["summer"] }, { flow: true }),
+    "http://x",
+  );
+  assert.equal(flow.searchParams.get("flow"), "1");
+  assert.ok(isPersonalized(Object.fromEntries(flow.searchParams)));
+});
+
+test("the flow marker survives filtering and clearing filters", () => {
+  const s: Selection = { practice: ["Vinyasa"], fit: ["sculpted"], gender: ["women"] };
+  for (const href of [toggleHref(s, "material", "nylon", true), clearFiltersHref(s, true)]) {
+    assert.equal(new URL(href, "http://x").searchParams.get("flow"), "1", href);
+  }
+  // ...and is not invented when it was never set.
+  assert.equal(new URL(toggleHref(s, "material", "nylon"), "http://x").searchParams.get("flow"), null);
+});
+
+test("every selection link lands on the product section", () => {
+  assert.match(toQuery({ practice: ["Hatha"] }), /#products$/);
+  assert.match(toggleHref({}, "gender", "women"), /#products$/);
+});
+
+test("a practice card narrows and ranks: its practice tops the results", () => {
+  for (const practice of ["Vinyasa", "Ashtanga", "Yin Yoga", "Hot Yoga"]) {
+    const top = recommend({ practice: [practice] }).slice(0, 8);
+    assert.ok(
+      top.every((p) => p.practice.includes(practice as never)),
+      `${practice}: top results do not match the practice`,
+    );
+  }
 });

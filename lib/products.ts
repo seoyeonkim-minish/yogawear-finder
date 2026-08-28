@@ -41,6 +41,15 @@ export type Key = FlowKey | FilterKey;
 
 export type Selection = Partial<Record<Key, string[]>>;
 
+/**
+ * Carried through every link but not a facet: it records that the flow came
+ * from the guided discovery. Two people can both be filtered to Vinyasa — one
+ * chose it from a practice card, one answered three questions — and only the
+ * second should be shown a personalised "Your flow" state.
+ */
+export const isPersonalized = (params: Record<string, string | string[] | undefined>) =>
+  params.flow === "1";
+
 const valuesOf = (p: Product, k: Key): string[] => {
   const v = p[k as keyof Product];
   return Array.isArray(v) ? (v as string[]) : [String(v)];
@@ -170,23 +179,25 @@ export function selectionFromParams(params: Record<string, string | string[] | u
   return out;
 }
 
-export function toQuery(s: Selection): string {
+/** Every selection link lands on the product section, not the top of the page. */
+export function toQuery(s: Selection, opts: { flow?: boolean } = {}): string {
   const sp = new URLSearchParams();
   for (const k of [...FLOW_KEYS, ...FILTER_KEYS]) for (const v of s[k] ?? []) sp.append(k, v);
+  if (opts.flow) sp.set("flow", "1");
   const q = sp.toString();
-  return q ? `/?${q}` : "/";
+  return q ? `/?${q}#products` : "/#products";
 }
 
 /** Href with one value toggled — every filter control is a plain link. */
-export function toggleHref(s: Selection, k: Key, value: string): string {
+export function toggleHref(s: Selection, k: Key, value: string, flow = false): string {
   const current = s[k] ?? [];
   const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
-  return toQuery({ ...s, [k]: next });
+  return toQuery({ ...s, [k]: next }, { flow });
 }
 
 /** Clearing filters must not clear what discovery learned. */
-export const clearFiltersHref = (s: Selection) =>
-  toQuery(Object.fromEntries(FLOW_KEYS.map((k) => [k, s[k] ?? []])));
+export const clearFiltersHref = (s: Selection, flow = false) =>
+  toQuery(Object.fromEntries(FLOW_KEYS.map((k) => [k, s[k] ?? []])), { flow });
 
 /* -------------------------------------------------------------------- labels */
 
@@ -206,6 +217,26 @@ export const FIT_HINT: Record<string, string> = {
   compression: "단단하게 잡아주는 핏",
   "high support": "격한 움직임을 위한 지지력",
 };
+/** Card copy: three words that carry the character of a practice. */
+export const PRACTICE_TRAITS: Record<string, string> = {
+  Hatha: "Balanced · Grounded · Steady",
+  Vinyasa: "Fluid · Active · Flexible",
+  Ashtanga: "Dynamic · Structured · Powerful",
+  "Hot Yoga": "Heat · Sweat · Breathability",
+  "Yin Yoga": "Slow · Soft · Restorative",
+  Pilates: "Controlled · Sculpted · Supportive",
+};
+
+/** The one-line context shown above the grid when a practice is chosen. */
+export const PRACTICE_LEAD: Record<string, string> = {
+  Hatha: "Steady pieces for a grounded practice.",
+  Vinyasa: "Fluid pieces made to move with you.",
+  Ashtanga: "Built to hold through a powerful sequence.",
+  "Hot Yoga": "Light, quick-drying pieces for heat and sweat.",
+  "Yin Yoga": "Soft pieces to settle and stay a while.",
+  Pilates: "Supportive pieces for controlled movement.",
+};
+
 export const PRACTICE_HINT: Record<string, string> = {
   Hatha: "느리게 · 기본에 충실하게",
   Vinyasa: "흐르듯 · 활동적으로",
