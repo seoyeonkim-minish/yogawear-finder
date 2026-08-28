@@ -140,10 +140,25 @@ function splitAll(gsap: GSAP) {
 }
 
 function revealAll(gsap: GSAP, out: gsap.core.Tween[]) {
+  // The entrance overlay covers the hero. Anything set to play on load is held
+  // until it finishes, or it animates where nobody can see it.
+  const held: gsap.core.Tween[] = [];
+  const gated = document.documentElement.hasAttribute("data-entrance");
+  const hold = (tween: gsap.core.Tween, immediate: boolean) => {
+    if (gated && immediate) {
+      tween.pause();
+      held.push(tween);
+    }
+    return tween;
+  };
+  if (gated) {
+    window.addEventListener("amadi:entered", () => held.forEach((t) => t.play()), { once: true });
+  }
+
   document.querySelectorAll<HTMLElement>("[data-split]").forEach((el) => {
     const words = el.querySelectorAll(".split-word");
     const delay = Number(el.dataset.delay ?? 0);
-    out.push(gsap.fromTo(
+    out.push(hold(gsap.fromTo(
       words,
       { yPercent: 115, autoAlpha: 0 },
       {
@@ -155,12 +170,12 @@ function revealAll(gsap: GSAP, out: gsap.core.Tween[]) {
         delay,
         scrollTrigger: el.dataset.immediate ? undefined : { trigger: el, start: "top 85%", once: true },
       },
-    ));
+    ), Boolean(el.dataset.immediate)));
   });
 
   document.querySelectorAll<HTMLElement>("[data-reveal]").forEach((el) => {
     const delay = Number(el.dataset.delay ?? 0);
-    out.push(gsap.fromTo(
+    out.push(hold(gsap.fromTo(
       el,
       { y: 28, autoAlpha: 0 },
       {
@@ -171,7 +186,7 @@ function revealAll(gsap: GSAP, out: gsap.core.Tween[]) {
         delay,
         scrollTrigger: el.dataset.immediate ? undefined : { trigger: el, start: "top 88%", once: true },
       },
-    ));
+    ), Boolean(el.dataset.immediate)));
   });
 
   // Product cards: a quiet stagger, deliberately weaker than the hero.

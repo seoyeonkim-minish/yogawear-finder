@@ -64,7 +64,14 @@ body {
   opacity: 0;
 }
 
+/* The entrance is server-rendered so it covers the hero from the first paint.
+   Anyone who asked for reduced motion must never see it, and CSS gets there
+   before JavaScript does. */
 @media (prefers-reduced-motion: reduce) {
+  [data-entrance-overlay] {
+    display: none;
+  }
+
   .js [data-reveal],
   .js [data-split] {
     opacity: 1;
