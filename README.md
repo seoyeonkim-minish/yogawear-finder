@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# yogawear-finder
 
-## Getting Started
+요가 브랜드를 가로질러 요가웨어를 **소재 / 계절 / 종류 / 브랜드**로 탐색하는 카탈로그.
 
-First, run the development server:
+## 실행
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev     # http://localhost:3000
+npm test        # 시드 데이터 스키마 + 필터 로직 검증
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 구조
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| 경로 | 역할 |
+|---|---|
+| `data/products.json` | 유일한 데이터 소스. 브랜드는 상품의 필드 (별도 파일 없음) |
+| `lib/products.ts` | 타입, 필터링(패싯 간 AND / 패싯 내 OR), 패싯 집계, URL 직렬화 |
+| `app/page.tsx` | 필터 그리드. 필터 상태는 URL searchParams — 클라이언트 상태 없음 |
+| `app/product/[id]/page.tsx` | 상세. `generateStaticParams`로 SSG |
+| `test/filter.test.ts` | `node:test` 단일 체크 |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 상품 추가
 
-## Learn More
+`data/products.json`에 항목 하나 추가하면 끝. 새 소재/계절 값은 필터 UI에 자동으로 나타남 (`facetOptions`가 데이터에서 파생).
 
-To learn more about Next.js, take a look at the following resources:
+```json
+{
+  "id": "brand-slug-product-slug",
+  "brand": "Brand", "name": "Product name", "category": "leggings",
+  "material": ["organic cotton"], "season": ["spring", "fall"],
+  "price": 78, "colors": ["black"],
+  "image": "https://…", "url": "https://…"
+}
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`season`은 `spring | summer | fall | winter`만 허용 (테스트가 강제). 이미지는 현재 placehold.co placeholder.
