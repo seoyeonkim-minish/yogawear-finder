@@ -1,9 +1,9 @@
 # Amadi
 
-요가웨어를 **Discover → Recommend → Refine** 흐름으로 찾는 카탈로그.
+요가웨어를 **Motion → Emotion → Discover → Recommend → Refine** 흐름으로 찾는 카탈로그.
 2,900개+ 상품, 97개 브랜드 (해외 10곳 + 29CM 경유 한국 브랜드).
 
-첫 진입에서 필터를 보여주지 않는다. 세 가지 질문(수련 / 착용감 / 계절)으로
+첫 진입은 시네마틱 히어로다. 필터를 보여주지 않는다. 세 가지 질문(수련 / 착용감 / 계절)으로
 사용자의 flow를 받고, 그에 맞는 순서로 상품을 보여준 뒤, 원할 때 조건을 더한다.
 
 ## Your Flow와 Filters는 다른 것이다
@@ -22,6 +22,20 @@ Discovery를 다시 여는 것이다.
 
 체형(Petite / Tall / Curvy / Athletic)은 첫 Discovery에서 묻지 않는다.
 `Find your fit`에서 사용자가 원할 때 선택하는 Optional Filter다.
+
+## 모션
+
+모션 강도는 아래로 갈수록 낮아진다: 히어로(강) → Discover(중) → 추천(중·약) → 상품(약).
+히어로만 스크롤 스크럽·포인터 패럴랙스·마그네틱 CTA·SVG `feDisplacementMap` 왜곡을 쓴다
+(WebGL 대신 SVG 필터 — 캔버스 없이 같은 효과를, reduced-motion에서 공짜로 끌 수 있다).
+
+- 히어로 → Discover는 한 번의 스크롤이다. 히어로 미디어가 축소·우측 이동하며 비운 자리로
+  `What's your practice?`가 올라온다. CTA를 눌러도 이동이 아니라 같은 구간을 스크롤한다.
+- `prefers-reduced-motion`이면 Lenis도 GSAP 애니메이션도 돌지 않고 콘텐츠가 그대로 보인다.
+  포인터가 coarse(터치)면 스무스 스크롤을 걸지 않는다.
+- GSAP 로드가 실패하면 `.js` 클래스를 떼서 숨겨둔 요소를 되살린다 — 모션은 어디까지나 향상이다.
+- 리빌은 `pathname + search`가 바뀔 때마다 다시 붙인다. 클라이언트 라우팅은 프로바이더를
+  리마운트하지 않아서, 마운트 1회 세팅으로는 다음 페이지가 통째로 숨은 채 남는다.
 
 ## 실행
 
@@ -42,7 +56,10 @@ npm run build
 | `data/materials.json` | 해외 브랜드 원단 라인 → 섬유 매핑 (손으로 유지) |
 | `lib/products.ts` | 타입, flow 랭킹(`score`/`recommend`), 필터, 추천 이유, 라벨 |
 | `app/page.tsx` | 랜딩(flow 없음) / 결과(flow 있음) 두 상태 |
-| `components/discovery.tsx` | 3단계 Guided Discovery. 유일한 상태 보유 컴포넌트 |
+| `components/hero.tsx` | 시네마틱 히어로. 스크롤 스크럽 · 키네틱 워드 · 마그네틱 CTA · SVG 왜곡 |
+| `components/motion.tsx` | Lenis + GSAP ScrollTrigger. 리빌은 라우트 변경마다 재바인딩 |
+| `components/landing.tsx` | 히어로 → 인라인 Discover를 하나의 스크롤로 잇는 껍데기 |
+| `components/discovery.tsx` | 3단계 Guided Discovery. inline(첫 진입) / modal(Refine) 두 모드 |
 | `components/filter-bar.tsx` | 상단 필터 바. 네이티브 `<details>` 팝오버 + 링크, 클라이언트 상태 없음 |
 | `components/product-card.tsx` | 추천 이유 태그가 붙는 카드 |
 | `components/wishlist.tsx` | localStorage 위시리스트 (뷰어 로컬 전용) |

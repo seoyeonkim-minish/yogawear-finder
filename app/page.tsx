@@ -1,13 +1,25 @@
 import Link from "next/link";
 import {
   FILTER_KEYS, FLOW_KEYS, FIT_KO, clearFiltersHref, hasFilters, hasFlow, ko,
-  recommend, selectionFromParams, toggleHref,
+  products, recommend, selectionFromParams, toggleHref, type Selection,
 } from "@/lib/products";
-import { DiscoveryTrigger } from "@/components/discovery";
 import { FilterBar } from "@/components/filter-bar";
+import { Landing } from "@/components/landing";
 import { ProductCard } from "@/components/product-card";
+import { RefineTrigger } from "@/components/discovery";
 
 const PAGE_SIZE = 48;
+
+/** Hero imagery comes from the catalogue itself — real yoga-wear model shots. */
+const HERO_IDS = [
+  "alo-yoga-16-high-waist-airlift-capri",
+  "29cm-부디무드라-fortune-pants-16-colors-2138961",
+  "29cm-무브웜-bar-tank-top-4026991",
+  "29cm-데비웨어-나디안-하렘팬츠-devi-b0077-네이비-2669357",
+];
+const heroImages = HERO_IDS.map(
+  (id, i) => products.find((p) => p.id === id)?.image ?? products[i * 40]?.image,
+).filter(Boolean) as string[];
 
 const flowLabel = (k: string, v: string) => (k === "fit" ? FIT_KO[v] : k === "season" ? ko(v) : v);
 
@@ -16,54 +28,51 @@ export default async function Home({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const params = await searchParams;
-  const selection = selectionFromParams(params);
-  const started = hasFlow(selection);
-
-  // First entry shows the guided discovery, not a wall of filters.
-  if (!started) return <Landing selection={selection} />;
+  const selection = selectionFromParams(await searchParams);
+  if (!hasFlow(selection)) return <Landing selection={selection} images={heroImages} />;
 
   const results = recommend(selection);
   const shown = results.slice(0, PAGE_SIZE);
 
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-10 md:px-10">
-      <header className="flex flex-wrap items-baseline justify-between gap-4">
-        <Link href="/" className="display text-3xl">
-          Amadi
-        </Link>
-      </header>
+      <Link href="/" className="display text-3xl">
+        Amadi
+      </Link>
 
-      <section className="mt-10 border-b border-rose/20 pb-8">
-        <p className="eyebrow text-rose">Your flow</p>
-        <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-3">
-          <p className="display text-3xl leading-tight md:text-4xl">
-            {FLOW_KEYS.flatMap((k) => (selection[k] ?? []).map((v) => flowLabel(k, v))).join(" · ")}
+      {/* The recommendation moment: what we heard, before what we found. */}
+      <section className="border-b border-sand py-16 md:py-20">
+        <p className="eyebrow text-gray" data-reveal data-immediate>
+          Your flow, curated.
+        </p>
+        <h1 className="display mt-5 text-[clamp(2.25rem,6vw,4.5rem)] leading-[1.05]" data-split data-immediate data-delay="0.15">
+          {FLOW_KEYS.flatMap((k) => (selection[k] ?? []).map((v) => flowLabel(k, v))).join(" · ")}
+        </h1>
+        <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3" data-reveal data-immediate data-delay="0.5">
+          <p className="max-w-md text-sm leading-relaxed text-gray">
+            움직임과 착용감, 계절을 기준으로 고른 제품입니다.
           </p>
-          <DiscoveryTrigger
+          <RefineTrigger
             selection={selection}
             label="Refine my flow"
-            className="eyebrow text-rose underline underline-offset-4 hover:text-cream"
+            className="eyebrow text-charcoal underline underline-offset-4 hover:text-gray"
           />
         </div>
-        <p className="mt-3 max-w-lg text-sm text-cream-dim">
-          움직임과 착용감, 계절을 기준으로 고른 제품입니다.
-        </p>
       </section>
 
-      <div className="sticky top-0 z-30 -mx-6 bg-ground/95 px-6 py-4 backdrop-blur md:-mx-10 md:px-10">
+      <div className="sticky top-0 z-30 -mx-6 bg-ivory/95 px-6 py-4 backdrop-blur md:-mx-10 md:px-10">
         <FilterBar selection={selection} />
       </div>
 
       {hasFilters(selection) && (
         <div className="mb-6 flex flex-wrap items-center gap-2">
-          <span className="eyebrow text-rose">Filters</span>
+          <span className="eyebrow text-gray">Filters</span>
           {FILTER_KEYS.flatMap((k) =>
             (selection[k] ?? []).map((v) => (
               <Link
                 key={`${k}-${v}`}
                 href={toggleHref(selection, k, v)}
-                className="rounded-full border border-rose/30 px-3 py-1 text-xs text-cream-dim hover:border-cream hover:text-cream"
+                className="rounded-full border border-sand px-3 py-1 text-xs text-gray transition hover:border-charcoal hover:text-charcoal"
               >
                 {ko(v)} ×
               </Link>
@@ -71,42 +80,25 @@ export default async function Home({
           )}
           <Link
             href={clearFiltersHref(selection)}
-            className="ml-1 text-xs text-cream-dim/60 underline underline-offset-4 hover:text-cream"
+            className="ml-1 text-xs text-gray underline underline-offset-4 hover:text-charcoal"
           >
             Clear filters
           </Link>
         </div>
       )}
 
-      <p className="mb-6 text-sm text-cream-dim">{results.length.toLocaleString("ko-KR")}개</p>
+      <p className="mb-8 text-sm text-gray">{results.length.toLocaleString("ko-KR")}개</p>
 
-      {results.length === 0 ? (
-        <div className="py-24 text-center">
-          <p className="display text-3xl">No perfect match yet.</p>
-          <p className="mt-4 text-sm text-cream-dim">
-            플로우는 그대로 두고 조건 하나만 풀어보세요.
-          </p>
-          <div className="mt-8 flex items-center justify-center gap-6">
-            <DiscoveryTrigger
-              selection={selection}
-              label="Refine my flow"
-              className="rounded-full bg-cream px-6 py-3 text-sm text-ground-deep hover:bg-rose-soft"
-            />
-            <Link href={clearFiltersHref(selection)} className="text-sm text-cream-dim underline underline-offset-4 hover:text-cream">
-              Clear filters
-            </Link>
-          </div>
-        </div>
-      ) : (
+      {results.length === 0 ? <Empty selection={selection} /> : (
         <>
-          <ul className="grid grid-cols-2 gap-x-5 gap-y-10 md:grid-cols-3 xl:grid-cols-4">
+          <ul data-stagger className="grid grid-cols-2 gap-x-5 gap-y-12 md:grid-cols-3 xl:grid-cols-4">
             {shown.map((p) => (
               <ProductCard key={p.id} product={p} selection={selection} />
             ))}
           </ul>
           {results.length > shown.length && (
-            <p className="mt-12 text-center text-sm text-cream-dim/60">
-              적합도 순 상위 {PAGE_SIZE}개를 보여주고 있습니다. 조건을 더하면 좁혀집니다.
+            <p className="mt-16 text-center text-sm text-gray">
+              적합도 순 상위 {PAGE_SIZE}개입니다. 조건을 더하면 좁혀집니다.
             </p>
           )}
         </>
@@ -115,35 +107,25 @@ export default async function Home({
   );
 }
 
-function Landing({ selection }: { selection: ReturnType<typeof selectionFromParams> }) {
+/** Offer the flow edit before the blunt reset — the flow is the thing they built. */
+function Empty({ selection }: { selection: Selection }) {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col justify-center px-6 py-20 md:px-10">
-      <p className="eyebrow text-rose">Yogawear Index</p>
-      <h1 className="display mt-4 text-7xl leading-none md:text-8xl">Amadi</h1>
-      <p className="mt-8 max-w-md text-base leading-relaxed text-cream-dim">
-        어떻게 움직이고, 어떤 착용감을 좋아하고, 언제 수련하는지.
-        <br />
-        세 가지만 알려주시면 나머지는 저희가 고릅니다.
-      </p>
-
-      <DiscoveryStarter selection={selection} />
-
-      <p className="mt-16 text-xs text-cream-dim/50">
-        97개 브랜드 · 2,900개+ 제품 · 국내외 요가웨어
-      </p>
-    </main>
-  );
-}
-
-/** The landing CTA opens the same flow the refine button does. */
-function DiscoveryStarter({ selection }: { selection: ReturnType<typeof selectionFromParams> }) {
-  return (
-    <div className="mt-10">
-      <DiscoveryTrigger
-        selection={selection}
-        label="Find my yoga wear"
-        className="rounded-full bg-cream px-8 py-4 text-sm text-ground-deep transition hover:bg-rose-soft"
-      />
+    <div className="py-28 text-center">
+      <p className="display text-4xl">No perfect match yet.</p>
+      <p className="mt-5 text-sm text-gray">플로우는 그대로 두고 조건 하나만 풀어보세요.</p>
+      <div className="mt-10 flex items-center justify-center gap-8">
+        <RefineTrigger
+          selection={selection}
+          label="Refine my flow"
+          className="rounded-full bg-charcoal px-7 py-3.5 text-sm text-ivory hover:bg-ink"
+        />
+        <Link
+          href={clearFiltersHref(selection)}
+          className="text-sm text-gray underline underline-offset-4 hover:text-charcoal"
+        >
+          Clear filters
+        </Link>
+      </div>
     </div>
   );
 }

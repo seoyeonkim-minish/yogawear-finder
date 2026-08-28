@@ -34,25 +34,25 @@ export default async function ProductPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-12 md:px-10">
-      <Link href="/" className="eyebrow text-rose hover:text-cream">
+      <Link href="/" className="eyebrow text-gray hover:text-charcoal">
         ← Amadi
       </Link>
 
       <div className="mt-10 grid gap-12 md:grid-cols-2">
-        <div className="overflow-hidden rounded-sm bg-surface">
+        <div className="overflow-hidden rounded-sm bg-beige">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={product.image} alt={product.name} className="aspect-3/4 w-full object-cover" />
         </div>
 
         <div>
-          <p className="eyebrow text-rose">{product.brand}</p>
+          <p className="eyebrow text-gray">{product.brand}</p>
           <h1 className="display mt-3 text-4xl leading-tight">{product.name}</h1>
-          <p className="mt-4 text-lg text-cream-dim">{formatPrice(product)}</p>
+          <p className="mt-4 text-lg text-gray">{formatPrice(product)}</p>
 
           {why.length > 0 && (
-            <div className="mt-8 rounded-sm border border-rose/25 bg-surface/50 p-5">
-              <p className="eyebrow text-rose">Why it fits your flow</p>
-              <p className="mt-2 text-sm leading-relaxed text-cream-dim">
+            <div className="mt-8 rounded-sm border border-sand bg-ivory-dim/50 p-5">
+              <p className="eyebrow text-gray">Why it fits your flow</p>
+              <p className="mt-2 text-sm leading-relaxed text-gray">
                 {why.join(" · ")} — {FIT_HINT[product.fit]}
                 {product.attributes.length > 0 &&
                   `, ${product.attributes.slice(0, 3).map((a) => ATTR_KO[a] ?? a).join(" · ")}`}
@@ -60,11 +60,11 @@ export default async function ProductPage({
             </div>
           )}
 
-          <dl className="mt-8 space-y-3.5 border-t border-rose/20 pt-8 text-sm">
+          <dl className="mt-8 space-y-3.5 border-t border-sand pt-8 text-sm">
             {ROWS.map(([label, get]) => (
               <div key={label} className="flex gap-5">
-                <dt className="w-14 shrink-0 text-cream-dim/60">{label}</dt>
-                <dd className="text-cream-dim">{get(product)}</dd>
+                <dt className="w-14 shrink-0 text-gray">{label}</dt>
+                <dd className="text-gray">{get(product)}</dd>
               </div>
             ))}
           </dl>
@@ -74,7 +74,7 @@ export default async function ProductPage({
               href={product.url}
               target="_blank"
               rel="noreferrer"
-              className="inline-block rounded-full bg-cream px-6 py-3 text-sm text-ground-deep transition hover:bg-rose-soft"
+              className="inline-block rounded-full bg-charcoal px-6 py-3 text-sm text-ivory transition hover:bg-ink"
             >
               {product.source === "29cm" ? "29CM에서 보기" : "브랜드 사이트에서 보기"}
             </a>
@@ -86,13 +86,13 @@ export default async function ProductPage({
       </div>
 
       {related.length > 0 && (
-        <section className="mt-20 border-t border-rose/20 pt-10">
-          <h2 className="eyebrow mb-6 text-rose">More from {product.brand}</h2>
+        <section className="mt-20 border-t border-sand pt-10">
+          <h2 className="eyebrow mb-6 text-gray">More from {product.brand}</h2>
           <ul className="grid grid-cols-2 gap-5 lg:grid-cols-4">
             {related.map((p) => (
               <li key={p.id}>
                 <Link href={`/product/${p.id}`} className="group block">
-                  <div className="overflow-hidden rounded-sm bg-surface">
+                  <div className="overflow-hidden rounded-sm bg-beige">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={p.image}
@@ -101,8 +101,8 @@ export default async function ProductPage({
                       className="aspect-3/4 w-full object-cover opacity-90 transition group-hover:opacity-100"
                     />
                   </div>
-                  <p className="mt-2.5 text-sm leading-snug text-cream">{p.name}</p>
-                  <p className="mt-1 text-sm text-cream-dim">{formatPrice(p)}</p>
+                  <p className="mt-2.5 text-sm leading-snug text-charcoal">{p.name}</p>
+                  <p className="mt-1 text-sm text-gray">{formatPrice(p)}</p>
                 </Link>
               </li>
             ))}

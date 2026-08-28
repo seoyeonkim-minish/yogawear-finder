@@ -26,15 +26,15 @@ function Popover({
       <summary
         className={`flex cursor-pointer list-none items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
           n
-            ? "border-cream bg-cream text-ground-deep"
-            : "border-rose/30 text-cream-dim hover:border-rose/60 hover:text-cream"
+            ? "border-charcoal bg-charcoal text-ivory"
+            : "border-sand text-gray hover:border-charcoal hover:text-charcoal"
         }`}
       >
         {title}
         {n > 0 && <span className="text-xs">{n}</span>}
         <span className="text-[0.625rem] opacity-60 group-open:rotate-180">▾</span>
       </summary>
-      <div className="absolute left-0 z-40 mt-2 max-h-96 w-64 overflow-y-auto rounded-sm border border-rose/25 bg-ground-deep p-2 shadow-xl">
+      <div className="absolute left-0 z-40 mt-2 max-h-96 w-64 overflow-y-auto rounded-sm border border-sand bg-ivory p-2 shadow-xl">
         {children}
       </div>
     </details>
@@ -61,7 +61,7 @@ function OptionLink({
     <Link
       href={toggleHref(selection, k, value)}
       className={`flex items-baseline justify-between gap-3 rounded-sm px-3 py-2 text-sm transition ${
-        on ? "bg-surface-2 text-cream" : "text-cream-dim hover:bg-surface"
+        on ? "bg-ivory-dim text-charcoal" : "text-gray hover:bg-beige"
       }`}
     >
       <span>
@@ -123,8 +123,8 @@ export function FilterBar({ selection }: { selection: Selection }) {
       {/* Proportions and preferred fit are related but not the same thing, so the
           popover keeps them as two labelled groups rather than one merged list. */}
       <Popover selection={selection} k="proportions" title="Find your fit">
-        <p className="px-3 pb-1 pt-2 eyebrow text-rose">Your proportions</p>
-        <p className="px-3 pb-2 text-[0.6875rem] text-cream-dim/60">
+        <p className="px-3 pb-1 pt-2 eyebrow text-gray">Your proportions</p>
+        <p className="px-3 pb-2 text-[0.6875rem] text-gray">
           체형에 맞게 설계된 제품을 찾습니다.
         </p>
         {PROPORTIONS.map((v) => (
@@ -137,7 +137,7 @@ export function FilterBar({ selection }: { selection: Selection }) {
             count={counts.proportions.get(v) ?? 0}
           />
         ))}
-        <p className="mt-3 border-t border-rose/20 px-3 pb-1 pt-3 eyebrow text-rose">Preferred fit</p>
+        <p className="mt-3 border-t border-sand px-3 pb-1 pt-3 eyebrow text-gray">Preferred fit</p>
         {FITS.map((v) => (
           <OptionLink
             key={v}

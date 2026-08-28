@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FIT_HINT, FIT_KO, PRACTICE_HINT, SEASON_HINT, ko, toQuery,
   type Selection,
@@ -11,7 +11,7 @@ const STEPS = [
   {
     key: "practice" as const,
     title: "What's your practice?",
-    sub: "주로 하는 수련을 골라주세요. 여러 개도 괜찮아요.",
+    sub: "주로 하는 수련을 골라주세요. 여러 개도 괜찮습니다.",
     max: 6,
     options: ["Hatha", "Vinyasa", "Ashtanga", "Hot Yoga", "Yin Yoga", "Pilates"],
     hint: PRACTICE_HINT,
@@ -38,34 +38,59 @@ const STEPS = [
 ];
 
 /**
- * The guided discovery. Opened on first entry and again by "Refine my flow",
- * where it must come back with the current answers already selected — refining
- * is editing, not starting over.
+ * One component, two placements:
+ *   inline — first visit, sitting in the page directly under the hero, so the
+ *            hero's last frame is Discover's first frame.
+ *   modal  — "Refine my flow", where the point is to keep the browsing context.
+ * Either way the answers are staged locally and only committed to the URL on
+ * the final CTA, so a half-finished edit never disturbs the results behind it.
  */
 export function Discovery({
   selection,
-  open,
+  variant,
   onClose,
+  onStepChange,
 }: {
   selection: Selection;
-  open: boolean;
+  variant: "inline" | "modal";
   onClose?: () => void;
+  onStepChange?: (step: number) => void;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Selection>(selection);
-
-  if (!open) return null;
+  const [leaving, setLeaving] = useState(false);
+  const panel = useRef<HTMLDivElement>(null);
 
   const s = STEPS[step];
   const chosen = draft[s.key] ?? [];
   const last = step === STEPS.length - 1;
 
+  useEffect(() => onStepChange?.(step), [step, onStepChange]);
+
+  useEffect(() => {
+    if (variant !== "modal") return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose?.();
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [variant, onClose]);
+
+  const go = (next: number) => {
+    // Cross-fade between questions instead of paging: the section stays put and
+    // only its content changes, which is what makes it read as one experience.
+    setLeaving(true);
+    setTimeout(() => {
+      setStep(next);
+      setLeaving(false);
+    }, 260);
+  };
+
   const toggle = (v: string) => {
-    const on = chosen.includes(v);
-    const next = on
-      ? chosen.filter((x) => x !== v)
-      : [...chosen, v].slice(-s.max); // keep the most recent within the cap
+    const next = chosen.includes(v) ? chosen.filter((x) => x !== v) : [...chosen, v].slice(-s.max);
     setDraft({ ...draft, [s.key]: next });
   };
 
@@ -74,76 +99,94 @@ export function Discovery({
     onClose?.();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-ground-deep/95 backdrop-blur-sm">
-      <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-6 py-12 md:py-20">
-        <div className="mb-10 flex items-center justify-between">
-          <p className="eyebrow text-rose">
-            {STEPS.map((_, i) => (
-              <span key={i} className={i === step ? "text-cream" : "opacity-40"}>
-                {String(i + 1).padStart(2, "0")}
-                {i < STEPS.length - 1 ? " — " : ""}
-              </span>
-            ))}
-          </p>
-          {onClose && (
-            <button onClick={onClose} className="eyebrow text-rose hover:text-cream">
-              Close
-            </button>
-          )}
-        </div>
-
-        <h2 className="display text-4xl leading-tight md:text-5xl">{s.title}</h2>
-        <p className="mt-3 text-sm text-cream-dim">{s.sub}</p>
-
-        <ul className="mt-10 grid gap-3 sm:grid-cols-2">
-          {s.options.map((v) => {
-            const on = chosen.includes(v);
-            return (
-              <li key={v}>
-                <button
-                  onClick={() => toggle(v)}
-                  aria-pressed={on}
-                  className={`w-full rounded-sm border px-5 py-5 text-left transition ${
-                    on
-                      ? "border-cream bg-cream text-ground-deep"
-                      : "border-rose/25 text-cream hover:border-rose/60 hover:bg-surface"
-                  }`}
-                >
-                  <span className="block text-lg">{s.label(v)}</span>
-                  <span
-                    className={`mt-1 block text-xs ${on ? "text-ground-deep/70" : "text-cream-dim/70"}`}
-                  >
-                    {s.hint[v]}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-
-        <div className="mt-auto flex items-center justify-between gap-4 pt-12">
-          <button
-            onClick={() => (step === 0 ? onClose?.() : setStep(step - 1))}
-            className="eyebrow text-rose hover:text-cream disabled:opacity-30"
-            disabled={step === 0 && !onClose}
-          >
-            ← Back
+  const body = (
+    <div
+      ref={panel}
+      className={`transition-[opacity,transform] duration-300 ease-out ${
+        leaving ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <p className="eyebrow">
+          {STEPS.map((_, i) => (
+            <span key={i} className={i === step ? "text-charcoal" : "text-gray-soft"}>
+              {String(i + 1).padStart(2, "0")}
+              {i < STEPS.length - 1 ? " — " : ""}
+            </span>
+          ))}
+        </p>
+        {variant === "modal" && (
+          <button onClick={onClose} className="eyebrow text-gray hover:text-charcoal">
+            Close
           </button>
-          <button
-            onClick={() => (last ? submit() : setStep(step + 1))}
-            className="rounded-full bg-cream px-7 py-3 text-sm text-ground-deep transition hover:bg-rose-soft"
-          >
-            {last ? "Update recommendations" : "Next"}
-          </button>
-        </div>
+        )}
+      </div>
+
+      <h2 className="display mt-8 text-[clamp(2rem,5vw,3.5rem)] leading-tight">{s.title}</h2>
+      <p className="mt-3 text-sm text-gray">{s.sub}</p>
+
+      <ul className="mt-10 grid gap-3 sm:grid-cols-2">
+        {s.options.map((v) => {
+          const on = chosen.includes(v);
+          return (
+            <li key={v}>
+              <button
+                onClick={() => toggle(v)}
+                aria-pressed={on}
+                className={`w-full rounded-sm border px-5 py-5 text-left transition duration-300 ${
+                  on
+                    ? "border-charcoal bg-charcoal text-ivory"
+                    : "border-sand bg-ivory-dim/40 hover:border-gray hover:bg-ivory-dim"
+                }`}
+              >
+                <span className="block text-lg">{s.label(v)}</span>
+                <span className={`mt-1 block text-xs ${on ? "text-ivory/70" : "text-gray"}`}>
+                  {s.hint[v]}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="mt-12 flex items-center justify-between gap-4">
+        <button
+          onClick={() => (step === 0 ? onClose?.() : go(step - 1))}
+          className="eyebrow text-gray hover:text-charcoal disabled:opacity-30"
+          disabled={step === 0 && variant === "inline"}
+        >
+          ← Back
+        </button>
+        <button
+          onClick={() => (last ? submit() : go(step + 1))}
+          className="rounded-full bg-charcoal px-8 py-4 text-sm text-ivory transition-colors hover:bg-ink"
+        >
+          {last ? (variant === "modal" ? "Update recommendations" : "See my edit") : "Next"}
+        </button>
       </div>
     </div>
   );
+
+  if (variant === "modal") {
+    return (
+      <div className="fixed inset-0 z-50 flex justify-end bg-ink/25" onClick={onClose}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
+          className="h-full w-full max-w-2xl overflow-y-auto bg-ivory px-8 py-12 shadow-2xl md:px-12"
+        >
+          {body}
+        </div>
+      </div>
+    );
+  }
+
+  return <div className="mx-auto w-full max-w-2xl">{body}</div>;
 }
 
-/** Hero CTA and the "Refine my flow" button both open the same flow. */
-export function DiscoveryTrigger({
+/** "Refine my flow" — the drawer variant, so the grid behind it stays visible. */
+export function RefineTrigger({
   selection,
   label,
   className,
@@ -158,7 +201,7 @@ export function DiscoveryTrigger({
       <button onClick={() => setOpen(true)} className={className}>
         {label}
       </button>
-      <Discovery selection={selection} open={open} onClose={() => setOpen(false)} />
+      {open && <Discovery selection={selection} variant="modal" onClose={() => setOpen(false)} />}
     </>
   );
 }

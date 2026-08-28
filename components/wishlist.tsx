@@ -50,7 +50,7 @@ export function WishlistButton({ id, label }: { id: string; label?: string }) {
     <button
       onClick={toggle}
       aria-label={on ? "위시리스트에서 빼기" : "위시리스트에 담기"}
-      className={`transition ${on ? "text-rose-soft" : "text-cream-dim/50 hover:text-rose"}`}
+      className={`transition ${on ? "text-charcoal" : "text-gray-soft hover:text-gray"}`}
     >
       {on ? "♥" : "♡"}
       {label ? <span className="ml-2 text-sm">{label}</span> : null}
