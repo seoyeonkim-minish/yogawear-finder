@@ -117,8 +117,19 @@ export function score(p: Product, s: Selection): number {
  * across brands rather than left in id order — otherwise one brand's whole
  * catalogue lands at the top and a curated page reads like a brand page.
  */
-export function recommend(s: Selection): Product[] {
-  const list = applyFilters(products, s);
+export function recommend(s: Selection, opts: { require?: FlowKey[] } = {}): Product[] {
+  // Flow keys normally rank without excluding. An archive is the exception: it
+  // is a list OF a practice, so that key has to actually narrow the catalogue,
+  // or the page claims 2,914 pieces suit Vinyasa.
+  let list = applyFilters(products, s);
+  for (const k of opts.require ?? []) {
+    const wanted = s[k];
+    if (!wanted?.length) continue;
+    list = list.filter((p) => {
+      const v = p[k as keyof Product];
+      return Array.isArray(v) ? v.some((x) => wanted.includes(x as string)) : wanted.includes(String(v));
+    });
+  }
   if (!hasFlow(s)) return list;
 
   const tiers = new Map<number, Product[]>();
@@ -179,25 +190,42 @@ export function selectionFromParams(params: Record<string, string | string[] | u
   return out;
 }
 
-/** Every selection link lands on the product section, not the top of the page. */
-export function toQuery(s: Selection, opts: { flow?: boolean } = {}): string {
+/**
+ * Every selection link lands on the product section rather than the top of the
+ * page. On a practice archive the practice is owned by the path, so it is left
+ * out of the query and the link stays on that route.
+ */
+export function toQuery(s: Selection, opts: { flow?: boolean; base?: string } = {}): string {
+  const onArchive = Boolean(opts.base);
   const sp = new URLSearchParams();
-  for (const k of [...FLOW_KEYS, ...FILTER_KEYS]) for (const v of s[k] ?? []) sp.append(k, v);
+  for (const k of [...FLOW_KEYS, ...FILTER_KEYS]) {
+    if (onArchive && k === "practice") continue;
+    for (const v of s[k] ?? []) sp.append(k, v);
+  }
   if (opts.flow) sp.set("flow", "1");
+  const base = opts.base ?? "/";
   const q = sp.toString();
-  return q ? `/?${q}#products` : "/#products";
+  return q ? `${base}?${q}#products` : `${base}#products`;
 }
 
 /** Href with one value toggled — every filter control is a plain link. */
-export function toggleHref(s: Selection, k: Key, value: string, flow = false): string {
+export function toggleHref(
+  s: Selection,
+  k: Key,
+  value: string,
+  opts: { flow?: boolean; base?: string } = {},
+): string {
+  // On an archive, choosing a practice means going to that practice's archive.
+  if (opts.base && k === "practice") return practiceHref(value);
   const current = s[k] ?? [];
   const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
-  return toQuery({ ...s, [k]: next }, { flow });
+  return toQuery({ ...s, [k]: next }, opts);
 }
 
 /** Clearing filters must not clear what discovery learned. */
-export const clearFiltersHref = (s: Selection, flow = false) =>
-  toQuery(Object.fromEntries(FLOW_KEYS.map((k) => [k, s[k] ?? []])), { flow });
+/** Clearing filters keeps the flow, and keeps you on the archive you are in. */
+export const clearFiltersHref = (s: Selection, opts: { flow?: boolean; base?: string } = {}) =>
+  toQuery(Object.fromEntries(FLOW_KEYS.map((k) => [k, s[k] ?? []])), opts);
 
 /* -------------------------------------------------------------------- labels */
 
@@ -226,6 +254,24 @@ export const PRACTICE_TRAITS: Record<string, string> = {
   "Yin Yoga": "Slow · Soft · Restorative",
   Pilates: "Controlled · Sculpted · Supportive",
 };
+
+/** Practices have their own archive route, so they need a stable URL segment. */
+export const PRACTICE_SLUGS: Record<string, string> = {
+  hatha: "Hatha",
+  vinyasa: "Vinyasa",
+  ashtanga: "Ashtanga",
+  "hot-yoga": "Hot Yoga",
+  "yin-yoga": "Yin Yoga",
+  pilates: "Pilates",
+};
+
+export const practiceFromSlug = (slug: string): string | null =>
+  PRACTICE_SLUGS[slug.toLowerCase()] ?? null;
+
+export const practiceSlug = (practice: string) =>
+  practice.toLowerCase().replace(/\s+/g, "-");
+
+export const practiceHref = (practice: string) => `/practice/${practiceSlug(practice)}`;
 
 /** The one-line context shown above the grid when a practice is chosen. */
 export const PRACTICE_LEAD: Record<string, string> = {

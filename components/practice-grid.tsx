@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { PRACTICE_TRAITS, toQuery } from "@/lib/products";
+import { PRACTICE_TRAITS, practiceHref } from "@/lib/products";
 
 /**
- * Explore by practice — the quick path. These are not content cards: each one
- * is a shortcut into the product grid with that practice already applied, which
- * is why they link to the same URL shape the filter bar produces.
+ * Explore by practice — the quick path. Each card opens that practice's archive:
+ * the whole catalogue filtered to it and ranked by how well each piece suits it.
  */
 export function PracticeGrid({ images }: { images: Record<string, string> }) {
   return (
@@ -25,7 +24,7 @@ export function PracticeGrid({ images }: { images: Record<string, string> }) {
         {Object.entries(PRACTICE_TRAITS).map(([name, traits]) => (
           <li key={name}>
             <Link
-              href={toQuery({ practice: [name] })}
+              href={practiceHref(name)}
               className="group relative block aspect-4/5 overflow-hidden rounded-sm bg-beige md:aspect-3/2"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

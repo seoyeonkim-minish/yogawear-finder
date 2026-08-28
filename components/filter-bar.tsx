@@ -48,7 +48,7 @@ function OptionLink({
   count,
   label,
   hint,
-  flow,
+  links,
 }: {
   selection: Selection;
   k: Key;
@@ -56,12 +56,12 @@ function OptionLink({
   count?: number;
   label: string;
   hint?: string;
-  flow: boolean;
+  links: { flow?: boolean; base?: string };
 }) {
   const on = selection[k]?.includes(value);
   return (
     <Link
-      href={toggleHref(selection, k, value, flow)}
+      href={toggleHref(selection, k, value, links)}
       className={`flex items-baseline justify-between gap-3 rounded-sm px-3 py-2 text-sm transition ${
         on ? "bg-ivory-dim text-charcoal" : "text-gray hover:bg-beige"
       }`}
@@ -80,7 +80,14 @@ const PRACTICES = ["Hatha", "Vinyasa", "Ashtanga", "Hot Yoga", "Yin Yoga", "Pila
 const PROPORTIONS = ["Petite", "Tall", "Curvy", "Athletic"];
 const FITS = ["relaxed", "sculpted", "compression", "high support"];
 
-export function FilterBar({ selection, flow = false }: { selection: Selection; flow?: boolean }) {
+export function FilterBar({
+  selection,
+  links = {},
+}: {
+  selection: Selection;
+  /** Where toggling a value should land: the home page, or a practice archive. */
+  links?: { flow?: boolean; base?: string };
+}) {
   const counts = Object.fromEntries(
     ([...FILTER_KEYS, "practice", "fit", "season"] as Key[]).map((k) => [
       k,
@@ -92,13 +99,13 @@ export function FilterBar({ selection, flow = false }: { selection: Selection; f
     <div className="flex gap-2 overflow-x-auto pb-1">
       <Popover selection={selection} k="gender" title={LABEL.gender}>
         {["women", "men", "unisex"].map((v) => (
-          <OptionLink key={v} flow={flow} selection={selection} k="gender" value={v} label={ko(v)} count={counts.gender.get(v)} />
+          <OptionLink key={v} links={links} selection={selection} k="gender" value={v} label={ko(v)} count={counts.gender.get(v)} />
         ))}
       </Popover>
 
       <Popover selection={selection} k="practice" title={LABEL.practice}>
         {PRACTICES.map((v) => (
-          <OptionLink key={v} flow={flow} selection={selection} k="practice" value={v} label={v} count={counts.practice.get(v)} />
+          <OptionLink key={v} links={links} selection={selection} k="practice" value={v} label={v} count={counts.practice.get(v)} />
         ))}
       </Popover>
 
@@ -106,7 +113,7 @@ export function FilterBar({ selection, flow = false }: { selection: Selection; f
         {optionsFor(products, "material").map(({ value, count }) => (
           <OptionLink
             key={value}
-            flow={flow}
+            links={links}
             selection={selection}
             k="material"
             value={value}
@@ -119,7 +126,7 @@ export function FilterBar({ selection, flow = false }: { selection: Selection; f
 
       <Popover selection={selection} k="season" title={LABEL.season}>
         {["spring", "summer", "fall", "winter"].map((v) => (
-          <OptionLink key={v} flow={flow} selection={selection} k="season" value={v} label={ko(v)} count={counts.season.get(v)} />
+          <OptionLink key={v} links={links} selection={selection} k="season" value={v} label={ko(v)} count={counts.season.get(v)} />
         ))}
       </Popover>
 
@@ -133,7 +140,7 @@ export function FilterBar({ selection, flow = false }: { selection: Selection; f
         {PROPORTIONS.map((v) => (
           <OptionLink
             key={v}
-            flow={flow}
+            links={links}
             selection={selection}
             k="proportions"
             value={v}
@@ -145,7 +152,7 @@ export function FilterBar({ selection, flow = false }: { selection: Selection; f
         {FITS.map((v) => (
           <OptionLink
             key={v}
-            flow={flow}
+            links={links}
             selection={selection}
             k="fit"
             value={v}

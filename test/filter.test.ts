@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  FILTER_KEYS, FLOW_KEYS, applyFilters, clearFiltersHref, formatPrice, hasFlow,
-  isPersonalized, optionsFor, products, reasons, recommend, score,
-  selectionFromParams, toggleHref, toQuery, type Product, type Selection,
+  FILTER_KEYS, FLOW_KEYS, PRACTICE_SLUGS, applyFilters, clearFiltersHref, formatPrice,
+  hasFlow, isPersonalized, optionsFor, practiceFromSlug, practiceHref, products, reasons,
+  recommend, score, selectionFromParams, toggleHref, toQuery,
+  type Product, type Selection,
 } from "../lib/products.ts";
 
 const SEASONS = ["spring", "summer", "fall", "winter"];
@@ -166,7 +167,7 @@ test("a practice card and a completed discovery produce different states", () =>
 
 test("the flow marker survives filtering and clearing filters", () => {
   const s: Selection = { practice: ["Vinyasa"], fit: ["sculpted"], gender: ["women"] };
-  for (const href of [toggleHref(s, "material", "nylon", true), clearFiltersHref(s, true)]) {
+  for (const href of [toggleHref(s, "material", "nylon", { flow: true }), clearFiltersHref(s, { flow: true })]) {
     assert.equal(new URL(href, "http://x").searchParams.get("flow"), "1", href);
   }
   // ...and is not invented when it was never set.
@@ -185,5 +186,76 @@ test("a practice card narrows and ranks: its practice tops the results", () => {
       top.every((p) => p.practice.includes(practice as never)),
       `${practice}: top results do not match the practice`,
     );
+  }
+});
+
+/* ------------------------------------------- practice archives ------------- */
+
+test("every practice has an archive, and the slug round-trips", () => {
+  const practices = new Set(products.flatMap((p) => p.practice));
+  for (const practice of practices) {
+    const href = practiceHref(practice);
+    assert.match(href, /^\/practice\/[a-z-]+$/, `${practice}: ${href}`);
+    const slug = href.split("/").pop()!;
+    assert.equal(practiceFromSlug(slug), practice, `${slug} does not map back`);
+  }
+  assert.equal(Object.keys(PRACTICE_SLUGS).length, 6);
+});
+
+test("an unknown slug has no archive, and a known one is case-insensitive", () => {
+  for (const slug of ["", "yoga", "hot yoga", "hot-yoga-2", "../products", "vinyasa/"]) {
+    assert.equal(practiceFromSlug(slug), null, `"${slug}" should not resolve`);
+  }
+  assert.equal(practiceFromSlug("Hot-Yoga"), "Hot Yoga");
+  assert.equal(practiceFromSlug("HOT-YOGA"), "Hot Yoga");
+});
+
+test("archive links stay on the archive and never re-add the practice", () => {
+  const base = practiceHref("Vinyasa");
+  const s: Selection = { practice: ["Vinyasa"], gender: ["women"] };
+
+  const material = toggleHref(s, "material", "nylon", { base });
+  assert.ok(material.startsWith(`${base}?`), material);
+  assert.doesNotMatch(material, /practice=/, "the path already owns the practice");
+  assert.match(material, /gender=women/);
+
+  const cleared = clearFiltersHref(s, { base });
+  assert.ok(cleared.startsWith(base), cleared);
+  assert.doesNotMatch(cleared, /gender=/);
+});
+
+test("choosing another practice on an archive moves to that archive", () => {
+  const base = practiceHref("Vinyasa");
+  assert.equal(toggleHref({ practice: ["Vinyasa"] }, "practice", "Ashtanga", { base }), "/practice/ashtanga");
+});
+
+test("home links are unaffected by the archive base", () => {
+  const home = toggleHref({ practice: ["Vinyasa"] }, "material", "nylon");
+  assert.ok(home.startsWith("/?"), home);
+  assert.match(home, /practice=Vinyasa/, "the home page keeps the practice in the query");
+  assert.match(home, /#products$/);
+});
+
+test("an archive contains only its own practice, and the home page does not", () => {
+  for (const practice of Object.values(PRACTICE_SLUGS)) {
+    const archive = recommend({ practice: [practice] }, { require: ["practice"] });
+    assert.ok(archive.length > 0, `${practice}: empty archive`);
+    assert.ok(
+      archive.every((p) => p.practice.includes(practice as never)),
+      `${practice}: the archive holds pieces that do not suit it`,
+    );
+    // Without `require` the same key only ranks — that is the home page's behaviour.
+    assert.equal(recommend({ practice: [practice] }).length, products.length);
+    assert.ok(archive.length < products.length, `${practice}: the archive did not narrow anything`);
+  }
+});
+
+test("an archive still narrows when other filters are applied", () => {
+  const s: Selection = { practice: ["Vinyasa"], gender: ["men"] };
+  const got = recommend(s, { require: ["practice"] });
+  assert.ok(got.length > 0);
+  for (const p of got) {
+    assert.ok(p.practice.includes("Vinyasa"));
+    assert.equal(p.gender, "men");
   }
 });
