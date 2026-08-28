@@ -22,6 +22,8 @@ export type Product = {
   attributes: string[];
   practice: Practice[];
   proportions: Proportion[];
+  /** The brand's own claim, never inferred from fit or fabric. */
+  maternityFriendly: boolean;
 };
 
 export const products = raw as Product[];
@@ -34,7 +36,7 @@ export const products = raw as Product[];
  * ---------------------------------------------------------------------- */
 
 export const FLOW_KEYS = ["practice", "fit", "season"] as const;
-export const FILTER_KEYS = ["gender", "material", "category", "brand", "proportions"] as const;
+export const FILTER_KEYS = ["gender", "material", "category", "brand", "proportions", "maternity"] as const;
 export type FlowKey = (typeof FLOW_KEYS)[number];
 export type FilterKey = (typeof FILTER_KEYS)[number];
 export type Key = FlowKey | FilterKey;
@@ -51,6 +53,9 @@ export const isPersonalized = (params: Record<string, string | string[] | undefi
   params.flow === "1";
 
 const valuesOf = (p: Product, k: Key): string[] => {
+  // Maternity is a yes/no condition of wear rather than one of the product's
+  // own attributes, so it has no value list of its own.
+  if (k === "maternity") return p.maternityFriendly ? ["1"] : [];
   const v = p[k as keyof Product];
   return Array.isArray(v) ? (v as string[]) : [String(v)];
 };
@@ -159,6 +164,8 @@ function spreadByBrand(tier: Product[]): Product[] {
 /** The one or two reasons this product surfaced, for the card and the detail page. */
 export function reasons(p: Product, s: Selection): string[] {
   const out: string[] = [];
+  // Only ever shown for a product whose brand says so.
+  if (p.maternityFriendly && s.maternity?.length) out.push("Maternity-friendly");
   for (const practice of s.practice ?? []) {
     if (p.practice.includes(practice as Practice)) out.push(`Best for ${practice}`);
   }
@@ -306,7 +313,7 @@ export const ATTR_KO: Record<string, string> = {
 export const LABEL: Record<Key, string> = {
   practice: "Practice", fit: "Fit", season: "Season",
   gender: "Gender", material: "Material", category: "Category",
-  brand: "Brand", proportions: "Proportions",
+  brand: "Brand", proportions: "Proportions", maternity: "Maternity",
 };
 export const VALUE_KO: Record<string, string> = {
   spring: "봄", summer: "여름", fall: "가을", winter: "겨울", all: "사계절",
@@ -319,6 +326,7 @@ export const VALUE_KO: Record<string, string> = {
   "merino wool": "메리노 울", rayon: "레이온", acrylic: "아크릴", bamboo: "대나무",
   cupro: "큐프라", acetate: "아세테이트", silk: "실크", "recycled cotton": "리사이클 코튼",
   Petite: "쁘띠", Tall: "톨", Curvy: "커비", Athletic: "애슬레틱",
+  "1": "Maternity-friendly",
   ...FIT_KO,
 };
 export const ko = (v: string) => VALUE_KO[v] ?? v;

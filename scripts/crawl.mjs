@@ -188,6 +188,15 @@ function practiceOf(attributes, category, season) {
   return season.length === 1 && season[0] === "winter" ? out.filter((x) => x !== "Hot Yoga") : out;
 }
 
+/**
+ * Maternity is only ever the brand's own claim, and only where a shopper can
+ * see it: the product's name. Nothing infers it from a relaxed fit or a stretchy
+ * fabric, and merchandising tags are not enough either — matching those put a
+ * maxi dress in the maternity list.
+ */
+const MATERNITY_WORDS = ["maternity", "pregnan", "bump", "nursing", "임부", "임산부", "마타니티", "산모", "임신"];
+const isMaternity = (hay) => MATERNITY_WORDS.some((w) => hay.includes(w));
+
 const PROPORTION_WORDS = {
   Tall: ["tall", "long length", "롱버전", "롱기장", "키큰"],
   Petite: ["petite", "cropped length", "short length", "숏기장", "숏버전"],
@@ -207,6 +216,7 @@ function deriveTraits(p, hay) {
     attributes,
     practice: practiceOf(attributes, p.category, p.season),
     proportions: proportionsOf(hay),
+    maternityFriendly: isMaternity(norm(p.name)),
   };
 }
 
@@ -515,6 +525,7 @@ console.log(`  currency: ${[...new Set(products.map((p) => p.currency))].map((c)
 console.log(`  fit: ${["relaxed", "sculpted", "compression", "high support"].map((f) => `${f} ${count((p) => p.fit === f)}`).join(" / ")}`);
 console.log(`  practice tagged: ${count((p) => p.practice.length)} (${pct(count((p) => p.practice.length))})`);
 console.log(`  proportions tagged: ${count((p) => p.proportions.length)}`);
+console.log(`  maternity (brand-declared): ${count((p) => p.maternityFriendly)}`);
 console.log(`  source: brand ${count((p) => p.source === "brand")} / 29cm ${count((p) => p.source === "29cm")}`);
 
 const holes = new Map();

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Noto_Sans_KR } from "next/font/google";
 import { MotionProvider } from "@/components/motion";
+import { Toaster } from "@/components/toast";
+import { WishlistLink } from "@/components/wishlist-link";
 import "./globals.css";
 
 const display = Cormorant_Garamond({
@@ -25,7 +27,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko" className={`${display.variable} ${sans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans font-light">
+        {/* The only persistent chrome on the site: a utility link that floats
+            over whatever is beneath it, so no section's layout changes. */}
+        <WishlistLink />
         <MotionProvider>{children}</MotionProvider>
+        <Toaster />
       </body>
     </html>
   );

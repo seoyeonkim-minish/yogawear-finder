@@ -132,6 +132,19 @@ export function FilterBar({
 
       {/* Proportions and preferred fit are related but not the same thing, so the
           popover keeps them as two labelled groups rather than one merged list. */}
+      {/* A condition of wear, kept out of gender and body type on purpose. */}
+      <Popover selection={selection} k="maternity" title={LABEL.maternity}>
+        <OptionLink
+          links={links}
+          selection={selection}
+          k="maternity"
+          value="1"
+          label="Maternity-friendly only"
+          hint="브랜드가 마타니티로 표기한 제품만"
+          count={counts.maternity.get("1") ?? 0}
+        />
+      </Popover>
+
       <Popover selection={selection} k="proportions" title="Find your fit">
         <p className="px-3 pb-1 pt-2 eyebrow text-gray">Your proportions</p>
         <p className="px-3 pb-2 text-[0.6875rem] text-gray">

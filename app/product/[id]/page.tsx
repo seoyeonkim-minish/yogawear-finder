@@ -4,7 +4,7 @@ import {
   ATTR_KO, FIT_HINT, FIT_KO, formatPrice, ko, products, reasons,
   selectionFromParams, type Product,
 } from "@/lib/products";
-import { WishlistButton } from "@/components/wishlist";
+import { WishlistButton } from "@/components/wishlist-button";
 
 const ROWS: [string, (p: Product) => string][] = [
   ["브랜드", (p) => p.brand],

@@ -62,7 +62,10 @@ npm run build
 | `components/discovery.tsx` | 3단계 Guided Discovery. inline(첫 진입) / modal(Refine) 두 모드 |
 | `components/filter-bar.tsx` | 상단 필터 바. 네이티브 `<details>` 팝오버 + 링크, 클라이언트 상태 없음 |
 | `components/product-card.tsx` | 추천 이유 태그가 붙는 카드 |
-| `components/wishlist.tsx` | localStorage 위시리스트 (뷰어 로컬 전용) |
+| `lib/use-wishlist.ts` | 위시리스트 스토어. 로그인 도입 시 교체할 단일 지점 |
+| `components/wishlist-button.tsx` | 카드 위의 하트. 카드 링크와 클릭을 분리 |
+| `app/wishlist/page.tsx` | 저장한 제품 화면 |
+| `app/practice/[slug]/page.tsx` | 수련별 아카이브 |
 | `app/product/[id]/page.tsx` | 상세 + "Why it fits your flow" |
 | `test/filter.test.ts` | `node:test`, 프레임워크 없음 |
 
@@ -100,6 +103,23 @@ Lululemon(403)·Athleta·prAna·Vuori·젝시믹스는 엔드포인트가 없어
 
 상품명·이미지를 브랜드/29CM에서 그대로 가져오는 구조이므로, 상업적 이용 전에는 각
 출처의 ToS를 확인해야 한다.
+
+## 상품 링크와 위시리스트
+
+상품 카드를 누르면 **브랜드/29CM의 실제 상품 페이지**가 새 탭에서 열린다
+(`target="_blank" rel="noopener noreferrer"`). 이 사이트는 파는 곳이 아니라 찾는 곳이다.
+
+하트는 카드 링크 안에 있으므로 클릭이 링크로 전파되지 않게 막는다 — 저장이 쇼핑몰을 열면 안 된다.
+
+위시리스트는 `localStorage`에 **상품 ID만** 저장하고 렌더 시 카탈로그에서 조회한다.
+이름·가격 복사본을 저장하면 재크롤 직후부터 낡은 값을 보여주기 때문이다. 사라진 ID는 조용히 빠진다.
+
+## Maternity
+
+`maternityFriendly`는 **브랜드가 상품명에 스스로 표기한 경우에만** true다(37개).
+편안한 핏이나 신축성 좋은 소재에서 추론하지 않는다 — 그건 없는 제품 주장을 만드는 일이다.
+머천다이징 태그도 근거로 쓰지 않는다: 태그까지 인정했더니 맥시 드레스가 마타니티 목록에 들어왔다.
+성별이나 체형 필터 안에 넣지 않고 독립 필터로 둔다.
 
 ## 데이터 갱신
 

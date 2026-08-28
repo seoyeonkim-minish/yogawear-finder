@@ -259,3 +259,48 @@ test("an archive still narrows when other filters are applied", () => {
     assert.equal(p.gender, "men");
   }
 });
+
+/* --------------------------------------------------- maternity ------------- */
+
+test("maternity is the brand's claim, never inferred", () => {
+  const flagged = products.filter((p) => p.maternityFriendly);
+  assert.ok(flagged.length > 20, `only ${flagged.length} maternity products`);
+  const declares = /maternity|pregnan|bump|nursing|임부|임산부|마타니티|산모|임신/i;
+  for (const p of flagged) {
+    assert.match(`${p.name} ${p.brand}`, declares, `${p.id} was flagged without the brand saying so`);
+  }
+  // ...and a merely comfortable garment is not flagged.
+  const comfy = products.filter((p) => p.fit === "relaxed" && p.material.includes("elastane"));
+  assert.ok(comfy.some((p) => !p.maternityFriendly), "relaxed + stretchy must not imply maternity");
+});
+
+test("maternity filters independently of gender and body type", () => {
+  const only = applyFilters(products, { maternity: ["1"] });
+  assert.ok(only.length > 20);
+  assert.ok(only.every((p) => p.maternityFriendly));
+
+  // It combines with everything else rather than replacing it.
+  const combined = applyFilters(products, { maternity: ["1"], gender: ["women"] });
+  assert.ok(combined.length > 0 && combined.length <= only.length);
+  for (const p of combined) {
+    assert.ok(p.maternityFriendly);
+    assert.equal(p.gender, "women");
+  }
+  // Without the filter the catalogue is not reduced to maternity pieces.
+  assert.ok(applyFilters(products, { gender: ["women"] }).length > only.length);
+});
+
+test("the maternity tag only shows when the filter is on and the brand declared it", () => {
+  const flagged = products.find((p) => p.maternityFriendly)!;
+  const plain = products.find((p) => !p.maternityFriendly)!;
+  assert.ok(reasons(flagged, { maternity: ["1"] }).includes("Maternity-friendly"));
+  assert.ok(!reasons(flagged, {}).includes("Maternity-friendly"), "no tag without the filter");
+  assert.ok(!reasons(plain, { maternity: ["1"] }).includes("Maternity-friendly"));
+});
+
+test("every product carries a real external product URL", () => {
+  for (const p of products) {
+    assert.match(p.url, /^https:\/\//, `${p.id}: ${p.url}`);
+    assert.ok(!/^https:\/\/[^/]+\/?$/.test(p.url), `${p.id}: ${p.url} is a homepage, not a product`);
+  }
+});

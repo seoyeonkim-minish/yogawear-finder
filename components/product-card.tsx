@@ -1,12 +1,16 @@
-import Link from "next/link";
 import { FIT_KO, formatPrice, ko, reasons, type Product, type Selection } from "@/lib/products";
-import { WishlistButton } from "./wishlist";
+import { WishlistButton } from "./wishlist-button";
 
+/**
+ * The card body is an external link to the brand's own product page — this site
+ * finds pieces, it does not sell them. The heart is a sibling of that link, not
+ * a child, so saving never opens the shop.
+ */
 export function ProductCard({ product: p, selection }: { product: Product; selection: Selection }) {
   const why = reasons(p, selection);
   return (
     <li className="group relative">
-      <Link href={`/product/${p.id}`} className="block">
+      <a href={p.url} target="_blank" rel="noopener noreferrer" className="block">
         <div className="relative overflow-hidden rounded-sm bg-beige">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -35,7 +39,7 @@ export function ProductCard({ product: p, selection }: { product: Product; selec
         {p.colors.length > 1 && p.colors[0] !== "-" && (
           <p className="mt-0.5 text-[0.6875rem] text-gray-soft">{p.colors.length}컬러</p>
         )}
-      </Link>
+      </a>
       <div className="absolute right-2 top-2 text-lg">
         <WishlistButton id={p.id} />
       </div>
