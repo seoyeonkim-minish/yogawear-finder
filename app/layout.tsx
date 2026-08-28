@@ -1,29 +1,29 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Cormorant_Garamond, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const display = Cormorant_Garamond({
+  variable: "--font-display",
   subsets: ["latin"],
+  weight: ["300", "400"],
+  style: ["italic", "normal"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const sans = Noto_Sans_KR({
+  variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["300", "400", "500"],
 });
 
 export const metadata: Metadata = {
-  title: "요가웨어 탐색",
-  description: "요가 브랜드를 소재·계절별로 가로질러 탐색하는 카탈로그",
+  title: "Amadi — 요가웨어 탐색",
+  description: "요가 브랜드를 소재와 계절로 가로질러 탐색하는 카탈로그.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="ko" className={`${display.variable} ${sans.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col font-sans font-light">{children}</body>
     </html>
   );
 }

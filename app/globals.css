@@ -1,26 +1,49 @@
 @import "tailwindcss";
 
+/* Amadi — palette read off the mood board: deep oxblood ground, dusty rose,
+   warm clay, cream type. Warm-dark by default; there is no light variant. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ground: #3a1a1d;
+  --ground-deep: #2a1215;
+  --surface: #4a2226;
+  --surface-2: #5b2b2f;
+  --rose: #b98a85;
+  --rose-soft: #c9a7a1;
+  --clay: #8c4a3f;
+  --cream: #f0e4dd;
+  --cream-dim: #d8c4bc;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-ground: var(--ground);
+  --color-ground-deep: var(--ground-deep);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-rose: var(--rose);
+  --color-rose-soft: var(--rose-soft);
+  --color-clay: var(--clay);
+  --color-cream: var(--cream);
+  --color-cream-dim: var(--cream-dim);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(120% 80% at 50% 0%, #4a2226 0%, transparent 60%),
+    var(--ground);
+  color: var(--cream);
+}
+
+/* The mood board's display type is an italic serif. */
+.display {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 300;
+  font-style: italic;
+  letter-spacing: -0.01em;
+}
+.eyebrow {
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }

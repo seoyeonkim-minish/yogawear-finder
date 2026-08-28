@@ -1,13 +1,15 @@
-# yogawear-finder
+# Amadi
 
-요가 브랜드를 가로질러 요가웨어를 **소재 / 계절 / 종류 / 브랜드**로 탐색하는 카탈로그.
+요가 브랜드를 가로질러 요가웨어를 **소재 / 계절 / 성별 / 종류 / 브랜드**로 탐색하는 카탈로그.
+현재 2,900개+ 상품, 97개 브랜드 (해외 10곳 + 29CM 경유 한국 브랜드).
 
 ## 실행
 
 ```bash
 npm install
-npm run dev     # http://localhost:3000
-npm test        # 시드 데이터 스키마 + 필터 로직 검증
+npm run dev      # http://localhost:3000
+npm test         # 데이터 스키마 + 필터 불변식 + 통화 혼입 검증
+npm run crawl    # 데이터 재수집 (.cache/ 재사용)
 npm run build
 ```
 
@@ -15,24 +17,51 @@ npm run build
 
 | 경로 | 역할 |
 |---|---|
-| `data/products.json` | 유일한 데이터 소스. 브랜드는 상품의 필드 (별도 파일 없음) |
-| `lib/products.ts` | 타입, 필터링(패싯 간 AND / 패싯 내 OR), 패싯 집계, URL 직렬화 |
+| `scripts/crawl.mjs` | 수집. 소스 2개, 매핑·소재·계절·성별 판정이 모두 여기 |
+| `data/products.json` | 커밋되는 산출물. 앱은 이 파일만 읽음 |
+| `data/materials.json` | 해외 브랜드 원단 라인 → 섬유 매핑 (손으로 유지) |
+| `lib/products.ts` | 타입, 필터링(패싯 간 AND / 패싯 내 OR), 패싯 집계, 통화 표기, 한글 라벨 |
 | `app/page.tsx` | 필터 그리드. 필터 상태는 URL searchParams — 클라이언트 상태 없음 |
 | `app/product/[id]/page.tsx` | 상세. `generateStaticParams`로 SSG |
-| `test/filter.test.ts` | `node:test` 단일 체크 |
+| `test/filter.test.ts` | `node:test`, 프레임워크 없음 |
 
-## 상품 추가
+## 데이터 출처와 한계
 
-`data/products.json`에 항목 하나 추가하면 끝. 새 소재/계절 값은 필터 UI에 자동으로 나타남 (`facetOptions`가 데이터에서 파생).
+**소스 1 — 브랜드 Shopify `/products.json`** (Alo Yoga, Beyond Yoga, Girlfriend Collective,
+TALA, Onzie, Senita, Manduka, Liforme, Spiritual Gangster, PopFlex). robots.txt가 막지 않는
+공개 엔드포인트, 요청 간격 4초.
+Lululemon(403)·Athleta·prAna·Vuori·젝시믹스는 엔드포인트가 없어 제외.
 
-```json
-{
-  "id": "brand-slug-product-slug",
-  "brand": "Brand", "name": "Product name", "category": "leggings",
-  "material": ["organic cotton"], "season": ["spring", "fall"],
-  "price": 78, "colors": ["black"],
-  "image": "https://…", "url": "https://…"
-}
+**소스 2 — 29CM 공개 검색 API.** 한국 브랜드 88곳을 한 소스로 커버. 브랜드 사이트를
+따로 긁는 대신 이쪽을 쓴 이유는 한국 D2C가 대부분 Cafe24/자체몰이라 공개 JSON이 없기 때문.
+
+세 필드는 어느 소스도 그냥 주지 않아서 이렇게 채운다:
+
+- **소재 (전체 50%)** — Shopify 페이로드에는 사실상 없다(측정 0~45%, 4개 브랜드 중 3개는
+  상세페이지에서 JS로 렌더링). 그래서 해외는 상품명에 들어 있는 원단 라인명(Spacedye,
+  SkinLuxe, Airlift…)으로 `data/materials.json`에서 찾고, 한국은 29CM 상품페이지의
+  구조화 필드 `제품 소재`(itemDetailsCode 101101)에서 실제 혼용률을 파싱한다 —
+  이쪽이 90% 채워져 있어서 손으로 매핑할 필요가 없다.
+- **계절** — 데이터에 없다. 소재 + 품목 키워드(기모·플리스→겨울, 린넨·냉감→여름)로
+  **추정**하며, UI에 "추정"이라고 표기한다.
+- **성별** — 29CM은 자체 카테고리(여성의류/남성의류)로 알려준다. 해외는 상품명·태그에서
+  판정하고 기본값은 여성. `"men"`이 `"women"`의 부분 문자열이라 단어 경계로 매칭한다
+  (이걸 안 해서 한때 여성 상품 전부가 남성으로 분류됐다).
+
+**통화**: Shopify Markets가 요청 지역(한국)에 맞춰 일부 스토어 가격을 원화로 내려주는데
+`meta.json`은 여전히 USD라고 말한다. 그래서 브랜드별 가격 중간값이 5,000 이상이면 KRW로
+판정한다. 원화 가격이 USD로 표기되는 사고를 테스트가 막는다.
+
+상품명·이미지를 브랜드/29CM에서 그대로 가져오는 구조이므로, 상업적 이용 전에는 각
+출처의 ToS를 확인해야 한다.
+
+## 데이터 갱신
+
+```bash
+npm run crawl                 # 캐시 사용 (매핑만 다시 계산 — 요청 0회)
+npm run crawl -- fresh        # 전부 재수집
+npm run crawl -- only=29cm    # 한국 소스만
 ```
 
-`season`은 `spring | summer | fall | winter`만 허용 (테스트가 강제). 이미지는 현재 placehold.co placeholder.
+마지막에 소재가 비어 있는 브랜드를 상품 수 순으로 출력한다. 위에서부터
+`data/materials.json`에 원단 라인 키를 추가하면 커버율이 올라간다.

@@ -1,0 +1,101 @@
+{
+  "_note": "Curated fabric-line -> fiber map. Compositions are not in the brands' public product API, so these are hand-set per fabric line (the unit that actually determines fabric). Keys are matched case-insensitively against the product title, longest key first. Verify before any commercial use.",
+
+  "Alo Yoga": {
+    "airlift": ["nylon", "elastane"],
+    "airbrush": ["nylon", "elastane"],
+    "alosoft": ["nylon", "elastane"],
+    "softsculpt": ["nylon", "elastane"],
+    "seamless": ["nylon", "elastane"],
+    "accolade": ["cotton", "polyester"],
+    "muse": ["cotton", "polyester", "elastane"],
+    "micro waffle": ["cotton", "polyester"],
+    "ribbed": ["nylon", "elastane"],
+    "cashmere": ["wool"],
+    "sherpa": ["polyester"],
+    "fleece": ["polyester"],
+    "linen": ["linen"]
+  },
+  "Beyond Yoga": {
+    "spacedye": ["polyester", "elastane"],
+    "featherweight": ["recycled polyester", "elastane"],
+    "luxefleece": ["polyester", "elastane"],
+    "softmark": ["modal", "elastane"],
+    "heather rib": ["modal", "elastane"],
+    "powerbeyond": ["nylon", "elastane"],
+    "shirred": ["nylon", "elastane"],
+    "cloud": ["polyester", "elastane"],
+    "cotton": ["cotton", "elastane"]
+  },
+  "Girlfriend Collective": {
+    "compressive": ["recycled polyester", "elastane"],
+    "luxe": ["recycled polyester", "elastane"],
+    "float": ["recycled nylon", "elastane"],
+    "reset": ["recycled cotton", "elastane"],
+    "topanga": ["recycled nylon", "elastane"],
+    "skyline": ["recycled polyester", "elastane"],
+    "rib": ["recycled cotton", "elastane"],
+    "fleece": ["recycled polyester"],
+    "sweater": ["recycled cotton"]
+  },
+  "TALA": {
+    "skinluxe": ["nylon", "elastane"],
+    "dayflex": ["recycled nylon", "elastane"],
+    "sculptflex": ["recycled nylon", "elastane"],
+    "zinnia": ["recycled polyester", "elastane"],
+    "seamless": ["nylon", "elastane"],
+    "rib": ["cotton", "elastane"],
+    "fleece": ["recycled polyester"],
+    "linen": ["linen"],
+    "knit": ["cotton"]
+  },
+  "Senita Athletics": {
+    "lux": ["nylon", "elastane"],
+    "skin": ["nylon", "elastane"],
+    "dynamic": ["recycled polyester", "elastane"],
+    "chakra": ["recycled polyester", "elastane"],
+    "rib": ["cotton", "elastane"],
+    "fleece": ["polyester"],
+    "tee": ["cotton", "polyester"]
+  },
+  "Spiritual Gangster": {
+    "rib": ["cotton", "elastane"],
+    "vibe": ["cotton", "polyester", "elastane"],
+    "sublime": ["cotton", "polyester", "elastane"],
+    "varsity": ["cotton", "polyester"],
+    "fleece": ["cotton", "polyester"],
+    "sweatshirt": ["cotton", "polyester"],
+    "crew": ["cotton", "polyester"],
+    "linen": ["linen"],
+    "cashmere": ["wool"]
+  },
+  "Onzie": {
+    "flow": ["nylon", "elastane"],
+    "classic": ["nylon", "elastane"],
+    "glossy": ["nylon", "elastane"],
+    "mesh": ["nylon", "elastane"],
+    "legging": ["nylon", "elastane"],
+    "bra": ["nylon", "elastane"]
+  },
+  "PopFlex": {
+    "pirouette": ["nylon", "elastane"],
+    "butterluxe": ["nylon", "elastane"],
+    "skort": ["nylon", "elastane"],
+    "fleece": ["polyester"],
+    "rib": ["cotton", "elastane"],
+    "mesh": ["nylon", "elastane"]
+  },
+  "Manduka": {
+    "dhara": ["organic cotton", "elastane"],
+    "atmana": ["organic cotton", "modal"],
+    "cntr": ["recycled polyester", "elastane"],
+    "cas": ["organic cotton"],
+    "tee": ["organic cotton"],
+    "hoodie": ["organic cotton", "polyester"]
+  },
+  "Liforme": {
+    "legging": ["recycled polyester", "elastane"],
+    "tee": ["organic cotton"],
+    "top": ["recycled polyester", "elastane"]
+  }
+}
