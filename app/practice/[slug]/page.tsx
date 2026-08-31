@@ -66,12 +66,7 @@ export default async function PracticeArchive({
         </div>
       </header>
 
-      <ProductSection
-        selection={selection}
-        base={base}
-        require={["practice"]}
-        header={<div className="pt-12" />}
-      />
+      <ProductSection selection={selection} base={base} header={<div className="pt-12" />} />
 
       <nav className="border-t border-sand px-6 py-14 md:px-10">
         <p className="eyebrow text-gray">Other practices</p>

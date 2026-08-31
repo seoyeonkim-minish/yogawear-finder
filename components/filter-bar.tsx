@@ -1,13 +1,15 @@
 import Link from "next/link";
 import {
-  FILTER_KEYS, FIT_HINT, FIT_KO, LABEL, MATERIAL_HINT, ko, optionsFor,
-  products, toggleHref, type Key, type Selection,
+  FIT_HINT, LABEL, MATERIAL_HINT, expandValues, optionsFor, products, toggleHref,
+  type Key, type Selection,
 } from "@/lib/products";
 
 /**
  * Horizontal filter bar. Each control is a native <details> popover holding
  * plain links — no client state, so a filtered page is a real, shareable URL.
- * On mobile the same markup collapses into a chip row that scrolls.
+ *
+ * The row wraps rather than scrolls: an overflow container clips the popovers
+ * that open below it, which left every option list unreachable.
  */
 function Popover({
   selection,
@@ -76,9 +78,40 @@ function OptionLink({
   );
 }
 
+/**
+ * What each control offers: the left side is the value the catalogue stores (or
+ * a group name from VALUE_GROUP), the right side is what the menu says. Only
+ * values the catalogue actually holds are listed — an option that matches
+ * nothing is a dead end rather than a filter.
+ */
+const GENDERS = [
+  ["women", "Female"],
+  ["men", "Male"],
+] as const;
+
 const PRACTICES = ["Hatha", "Vinyasa", "Ashtanga", "Hot Yoga", "Yin Yoga", "Pilates"];
-const PROPORTIONS = ["Petite", "Tall", "Curvy", "Athletic"];
-const FITS = ["relaxed", "sculpted", "compression", "high support"];
+
+const MATERIALS = [
+  ["nylon", "Nylon"],
+  ["polyester", "Polyester"],
+  ["recycled", "Recycled"],
+  ["cotton", "Cotton"],
+  ["organic cotton", "Organic Cotton"],
+  ["modal", "Modal"],
+] as const;
+
+const SEASONS = [
+  ["spring", "Spring"],
+  ["summer", "Summer"],
+  ["fall", "Autumn"],
+  ["winter", "Winter"],
+] as const;
+
+const FITS = [
+  ["relaxed", "Relaxed"],
+  ["sculpted", "Sculpted"],
+  ["compression", "Compression"],
+] as const;
 
 export function FilterBar({
   selection,
@@ -89,88 +122,110 @@ export function FilterBar({
   links?: { flow?: boolean; base?: string };
 }) {
   const counts = Object.fromEntries(
-    ([...FILTER_KEYS, "practice", "fit", "season"] as Key[]).map((k) => [
+    (["gender", "practice", "material", "season", "fit", "maternity"] as Key[]).map((k) => [
       k,
       new Map(optionsFor(products, k).map((o) => [o.value, o.count])),
     ]),
   ) as Record<Key, Map<string, number>>;
 
+  // A grouped option is worth everything it stands for.
+  const count = (k: Key, value: string) =>
+    expandValues(k, [value]).reduce((n, v) => n + (counts[k].get(v) ?? 0), 0);
+
+  const maternityOn = Boolean(selection.maternity?.includes("1"));
+
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1">
+    <div className="flex flex-wrap gap-2">
       <Popover selection={selection} k="gender" title={LABEL.gender}>
-        {["women", "men", "unisex"].map((v) => (
-          <OptionLink key={v} links={links} selection={selection} k="gender" value={v} label={ko(v)} count={counts.gender.get(v)} />
+        {GENDERS.map(([value, label]) => (
+          <OptionLink
+            key={value}
+            links={links}
+            selection={selection}
+            k="gender"
+            value={value}
+            label={label}
+            count={count("gender", value)}
+          />
         ))}
       </Popover>
 
       <Popover selection={selection} k="practice" title={LABEL.practice}>
         {PRACTICES.map((v) => (
-          <OptionLink key={v} links={links} selection={selection} k="practice" value={v} label={v} count={counts.practice.get(v)} />
+          <OptionLink
+            key={v}
+            links={links}
+            selection={selection}
+            k="practice"
+            value={v}
+            label={v}
+            count={count("practice", v)}
+          />
         ))}
       </Popover>
 
       <Popover selection={selection} k="material" title={LABEL.material}>
-        {optionsFor(products, "material").map(({ value, count }) => (
+        {MATERIALS.map(([value, label]) => (
           <OptionLink
             key={value}
             links={links}
             selection={selection}
             k="material"
             value={value}
-            label={ko(value)}
+            label={label}
             hint={MATERIAL_HINT[value]}
-            count={count}
+            count={count("material", value)}
           />
         ))}
       </Popover>
 
       <Popover selection={selection} k="season" title={LABEL.season}>
-        {["spring", "summer", "fall", "winter"].map((v) => (
-          <OptionLink key={v} links={links} selection={selection} k="season" value={v} label={ko(v)} count={counts.season.get(v)} />
-        ))}
-      </Popover>
-
-      {/* Proportions and preferred fit are related but not the same thing, so the
-          popover keeps them as two labelled groups rather than one merged list. */}
-      {/* A condition of wear, kept out of gender and body type on purpose. */}
-      <Popover selection={selection} k="maternity" title={LABEL.maternity}>
-        <OptionLink
-          links={links}
-          selection={selection}
-          k="maternity"
-          value="1"
-          label="Maternity-friendly only"
-          hint="브랜드가 마타니티로 표기한 제품만"
-          count={counts.maternity.get("1") ?? 0}
-        />
-      </Popover>
-
-      <Popover selection={selection} k="proportions" title="Find your fit">
-        <p className="px-3 pb-1 pt-2 eyebrow text-gray">Your proportions</p>
-        <p className="px-3 pb-2 text-[0.6875rem] text-gray">
-          체형에 맞게 설계된 제품을 찾습니다.
-        </p>
-        {PROPORTIONS.map((v) => (
+        {SEASONS.map(([value, label]) => (
           <OptionLink
-            key={v}
+            key={value}
             links={links}
             selection={selection}
-            k="proportions"
-            value={v}
-            label={ko(v)}
-            count={counts.proportions.get(v) ?? 0}
+            k="season"
+            value={value}
+            label={label}
+            count={count("season", value)}
           />
         ))}
-        <p className="mt-3 border-t border-sand px-3 pb-1 pt-3 eyebrow text-gray">Preferred fit</p>
-        {FITS.map((v) => (
+      </Popover>
+
+      {/* A condition of wear, not a facet to browse: one switch, no menu. */}
+      <Link
+        href={toggleHref(selection, "maternity", "1", links)}
+        role="checkbox"
+        aria-checked={maternityOn}
+        className={`flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
+          maternityOn
+            ? "border-charcoal bg-charcoal text-ivory"
+            : "border-sand text-gray hover:border-charcoal hover:text-charcoal"
+        }`}
+      >
+        <span
+          aria-hidden
+          className={`grid h-4 w-4 place-items-center rounded-[3px] border text-[0.625rem] leading-none ${
+            maternityOn ? "border-ivory bg-ivory text-charcoal" : "border-sand"
+          }`}
+        >
+          {maternityOn ? "✓" : ""}
+        </span>
+        Maternity-friendly only
+      </Link>
+
+      <Popover selection={selection} k="fit" title="Find your fit">
+        {FITS.map(([value, label]) => (
           <OptionLink
-            key={v}
+            key={value}
             links={links}
             selection={selection}
             k="fit"
-            value={v}
-            label={FIT_KO[v]}
-            hint={FIT_HINT[v]}
+            value={value}
+            label={label}
+            hint={FIT_HINT[value]}
+            count={count("fit", value)}
           />
         ))}
       </Popover>

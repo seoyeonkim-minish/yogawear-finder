@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  FILTER_KEYS, FLOW_KEYS, FIT_KO, clearFiltersHref, hasFilters, hasFlow, ko,
+  FILTER_KEYS, FLOW_KEYS, FIT_KO, clearFiltersHref, en, hasFlow, ko,
   recommend, toggleHref, type FlowKey, type Selection,
 } from "@/lib/products";
 import { FilterBar } from "./filter-bar";
@@ -31,9 +31,16 @@ export function ProductSection({
   /** Flow keys an archive turns into a hard filter rather than a ranking hint. */
   require?: FlowKey[];
 }) {
-  const results = recommend(selection, { require });
+  // A flow the visitor answered in discovery ranks; a value they ticked in the
+  // filter bar narrows. Same keys, different promise — so only the personalised
+  // page leaves practice / season / fit as ranking hints.
+  const narrowing = require ?? (personalized ? [] : [...FLOW_KEYS]);
+  const results = recommend(selection, { require: narrowing });
+  // Whatever narrows is what the visitor can see and take off again.
+  const chipKeys = [...FILTER_KEYS, ...narrowing];
   const shown = results.slice(0, PAGE_SIZE);
   const links = { flow: personalized, base };
+  const clearHref = clearFiltersHref(selection, links, personalized ? undefined : []);
 
   return (
     <section id="products" className="mx-auto w-full max-w-7xl scroll-mt-4 px-6 pb-32 md:px-10">
@@ -67,26 +74,26 @@ export function ProductSection({
           </header>
         ))}
 
-      <div className="sticky top-0 z-30 mt-12 bg-ivory/95 py-4 backdrop-blur">
+      <div className="sticky top-0 z-30 mt-12 bg-white/95 py-4 backdrop-blur">
         <FilterBar selection={selection} links={links} />
       </div>
 
-      {hasFilters(selection) && (
+      {chipKeys.some((k) => selection[k]?.length) && (
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <span className="eyebrow text-gray">Filters</span>
-          {FILTER_KEYS.flatMap((k) =>
+          {chipKeys.flatMap((k) =>
             (selection[k] ?? []).map((v) => (
               <Link
                 key={`${k}-${v}`}
                 href={toggleHref(selection, k, v, links)}
                 className="rounded-full border border-sand px-3 py-1 text-xs text-gray transition hover:border-charcoal hover:text-charcoal"
               >
-                {ko(v)} ×
+                {en(v)} ×
               </Link>
             )),
           )}
           <Link
-            href={clearFiltersHref(selection, links)}
+            href={clearHref}
             className="ml-1 text-xs text-gray underline underline-offset-4 hover:text-charcoal"
           >
             Clear filters
@@ -109,7 +116,7 @@ export function ProductSection({
               />
             )}
             <Link
-              href={clearFiltersHref(selection, links)}
+              href={clearHref}
               className="text-sm text-gray underline underline-offset-4 hover:text-charcoal"
             >
               Clear filters

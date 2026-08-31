@@ -63,13 +63,26 @@ const valuesOf = (p: Product, k: Key): string[] => {
 export const hasFlow = (s: Selection) => FLOW_KEYS.some((k) => s[k]?.length);
 export const hasFilters = (s: Selection) => FILTER_KEYS.some((k) => s[k]?.length);
 
+/**
+ * One control, several stored values. "Recycled" is a choice a shopper makes;
+ * "recycled polyester" and "recycled nylon" are how the catalogue records it.
+ * The group name is what travels in the URL — it expands only when matching.
+ */
+export const VALUE_GROUP: Partial<Record<Key, Record<string, string[]>>> = {
+  material: { recycled: ["recycled polyester", "recycled nylon"] },
+};
+
+export const expandValues = (k: Key, values: string[]) =>
+  values.flatMap((v) => VALUE_GROUP[k]?.[v] ?? [v]);
+
 /** Filters exclude: AND across keys, OR within a key. Flow never excludes. */
 export function applyFilters(list: Product[], s: Selection): Product[] {
   return list.filter((p) =>
     FILTER_KEYS.every((k) => {
       const selected = s[k];
       if (!selected?.length) return true;
-      return valuesOf(p, k).some((v) => selected.includes(v));
+      const wanted = expandValues(k, selected);
+      return valuesOf(p, k).some((v) => wanted.includes(v));
     }),
   );
 }
@@ -231,8 +244,12 @@ export function toggleHref(
 
 /** Clearing filters must not clear what discovery learned. */
 /** Clearing filters keeps the flow, and keeps you on the archive you are in. */
-export const clearFiltersHref = (s: Selection, opts: { flow?: boolean; base?: string } = {}) =>
-  toQuery(Object.fromEntries(FLOW_KEYS.map((k) => [k, s[k] ?? []])), opts);
+export const clearFiltersHref = (
+  s: Selection,
+  opts: { flow?: boolean; base?: string } = {},
+  /** Keys to carry through. Only a flow the visitor answered survives a clear. */
+  keep: readonly FlowKey[] = FLOW_KEYS,
+) => toQuery(Object.fromEntries(keep.map((k) => [k, s[k] ?? []])), opts);
 
 /* -------------------------------------------------------------------- labels */
 
@@ -330,6 +347,18 @@ export const VALUE_KO: Record<string, string> = {
   ...FIT_KO,
 };
 export const ko = (v: string) => VALUE_KO[v] ?? v;
+
+/** The filter controls speak English, so the chips that echo them do too. */
+export const VALUE_EN: Record<string, string> = {
+  women: "Female", men: "Male", unisex: "Unisex",
+  spring: "Spring", summer: "Summer", fall: "Autumn", winter: "Winter",
+  recycled: "Recycled", "organic cotton": "Organic Cotton", "recycled polyester": "Recycled Polyester",
+  "recycled nylon": "Recycled Nylon",
+  relaxed: "Relaxed", sculpted: "Sculpted", compression: "Compression", "high support": "High Support",
+  "1": "Maternity-friendly",
+};
+export const en = (v: string) =>
+  VALUE_EN[v] ?? v.replace(/\b[a-z]/g, (c) => c.toUpperCase());
 
 /** Material characteristics, shown in the material dropdown. */
 export const MATERIAL_HINT: Record<string, string> = {

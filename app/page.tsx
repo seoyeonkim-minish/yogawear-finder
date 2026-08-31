@@ -17,8 +17,12 @@ export default async function Home({
     <main>
       <HeroSection selection={selection} images={HERO_IMAGES} />
       <Intro />
-      <PracticeGrid images={PRACTICE_IMAGES} />
-      <ProductSection selection={selection} personalized={isPersonalized(params)} />
+      {/* White ground from here down, so the practice + product half reads as a
+          separate surface from the ivory editorial half above it. */}
+      <div className="bg-white pt-28 md:pt-40">
+        <PracticeGrid images={PRACTICE_IMAGES} />
+        <ProductSection selection={selection} personalized={isPersonalized(params)} />
+      </div>
       <Closing image={HERO_IMAGES[3]} />
     </main>
   );
