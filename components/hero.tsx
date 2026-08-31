@@ -1,18 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CONTOUR, CONTOUR_RANGE, DRAW_SHARE, SEQUENCES } from "@/lib/hero-story";
+import { SEQUENCES } from "@/lib/hero-story";
 
 const WORDS = ["flow.", "move.", "breathe.", "stretch."];
 
 /**
  * The loudest motion on the site, and a scroll story in its own right.
  *
- * The hero pins for a little over two viewports. The model holds the centre and
- * barely moves; everything else does — a contour follows her line, then four
- * annotations draw outward from the body, each one landing its index before its
- * copy. The lines connect a pose to something the garment does. They never
- * describe the body.
+ * The hero pins for a little over two viewports. The film holds the frame and
+ * four annotations arrive over it in sequence, each landing its index before
+ * its copy. They name what the garment does, never the body.
  *
  * Underneath that, the earlier hero behaviour is unchanged: the kinetic word,
  * the pointer parallax, and the magnetic CTA — now over looping footage.
@@ -45,14 +43,52 @@ export function Hero({ onDiscover }: { onDiscover: () => void }) {
     return () => clearInterval(t);
   }, []);
 
+  /**
+   * Phones autoplay muted inline video and nothing else, and React does not
+   * render the `muted` attribute into the server HTML — so on iOS the element
+   * arrives unmuted, autoplay is refused, and the hero sits on its poster. The
+   * properties are set here before play() is ever asked for.
+   *
+   * play() can still be refused: Low Power Mode on iOS, a Chrome tab restored
+   * from the background, a data-saver setting. Each of those clears on the next
+   * interaction or when the tab becomes visible, so we ask again then.
+   */
+  useEffect(() => {
+    const v = video.current;
+    if (!v) return;
+
+    v.muted = true;
+    v.defaultMuted = true;
+    v.setAttribute("muted", "");
+    v.playsInline = true;
+
+    // Autoplaying footage is motion too: hold it on the poster frame.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      v.pause();
+      return;
+    }
+
+    const play = () => void v.play().catch(() => {});
+    play();
+
+    const retry = () => play();
+    const onVisible = () => {
+      if (!document.hidden) play();
+    };
+    document.addEventListener("touchstart", retry, { once: true, passive: true });
+    document.addEventListener("click", retry, { once: true });
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("touchstart", retry);
+      document.removeEventListener("click", retry);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+
   useEffect(() => {
     const el = root.current;
     if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      // Autoplaying footage is motion too: hold it on the poster frame.
-      video.current?.pause();
-      return;
-    }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let cancelled = false;
     let cleanup = () => {};
@@ -83,44 +119,23 @@ export function Hero({ onDiscover }: { onDiscover: () => void }) {
         },
       });
 
-      // gsap's selector types assume HTML; these are SVG paths.
-      const path = (sel: string) => el.querySelector<SVGPathElement>(sel);
-
-      const contour = path("[data-contour]");
-      if (contour) {
-        const len = contour.getTotalLength();
-        gsap.set(contour, { strokeDasharray: len, strokeDashoffset: len });
-        story.to(
-          contour,
-          { strokeDashoffset: 0, ease: "none", duration: CONTOUR_RANGE[1] - CONTOUR_RANGE[0] },
-          CONTOUR_RANGE[0],
-        );
-      }
-
       for (const s of SEQUENCES) {
         if (small && !s.mobile) continue;
         const [start, end] = s.range;
         const span = end - start;
-        const draw = span * DRAW_SHARE;
 
-        const line = path(`[data-line="${s.index}"]`);
-        if (line) {
-          const len = line.getTotalLength();
-          gsap.set(line, { strokeDasharray: len, strokeDashoffset: len });
-          story.to(line, { strokeDashoffset: 0, ease: "none", duration: draw }, start);
-        }
-        // Line, then index, then copy — the order is the whole point.
+        // Index first, then its copy — the order is the whole point.
         story.fromTo(
           q(`[data-index="${s.index}"]`),
           { autoAlpha: 0, y: 8 },
-          { autoAlpha: 1, y: 0, ease: "none", duration: span * 0.15 },
-          start + draw,
+          { autoAlpha: 1, y: 0, ease: "none", duration: span * 0.2 },
+          start,
         );
         story.fromTo(
           q(`[data-copy="${s.index}"] > *`),
           { autoAlpha: 0, y: 14 },
-          { autoAlpha: 1, y: 0, ease: "none", stagger: span * 0.06, duration: span * 0.22 },
-          start + draw + span * 0.08,
+          { autoAlpha: 1, y: 0, ease: "none", stagger: span * 0.08, duration: span * 0.3 },
+          start + span * 0.12,
         );
       }
 
@@ -129,7 +144,6 @@ export function Hero({ onDiscover }: { onDiscover: () => void }) {
       story
         .to(q("[data-hero-copy]"), { autoAlpha: 0, y: -60, ease: "none", duration: 0.12 }, 0.02)
         .to(q("[data-hero-media]"), { scale: 1.04, ease: "none", duration: 1 }, 0)
-        .to(q("[data-hero-annotations]"), { yPercent: -4, ease: "none", duration: 1 }, 0)
         // Everything clears before the pin releases, so the next section arrives clean.
         .to(q("[data-hero-graphics]"), { autoAlpha: 0, ease: "none", duration: 0.06 }, 0.94)
         .to(q("[data-hero-scroll]"), { autoAlpha: 0, ease: "none", duration: 0.08 }, 0.06);
@@ -206,41 +220,8 @@ export function Hero({ onDiscover }: { onDiscover: () => void }) {
       </div>
 
         <div data-hero-graphics className="pointer-events-none absolute inset-0 z-10">
-        {/* One viewBox for every line, so a path stays on the shoulder or the
-            waistband at any viewport size. */}
-        <svg
-          data-hero-annotations
-          className="absolute inset-0 h-full w-full overflow-visible"
-          viewBox="0 0 100 100"
-          fill="none"
-          preserveAspectRatio="none"
-          aria-hidden
-        >
-          <path
-            data-contour
-            d={CONTOUR}
-            pathLength={1}
-            stroke="var(--ivory)"
-            strokeWidth={0.35}
-            strokeOpacity={0.5}
-            vectorEffect="non-scaling-stroke"
-          />
-          {SEQUENCES.map((s) => (
-            <path
-              key={s.index}
-              data-line={s.index}
-              d={s.path}
-              pathLength={1}
-              stroke="var(--ivory)"
-              strokeWidth={0.35}
-              strokeOpacity={0.6}
-              vectorEffect="non-scaling-stroke"
-              className={s.mobile ? undefined : "hidden md:block"}
-            />
-          ))}
-        </svg>
-
-        {/* Desktop: annotations sit beside the model, where their lines end. */}
+        {/* Desktop: annotations sit in the open half of the frame, beside the
+            dancer rather than over her. */}
         {SEQUENCES.map((s) => (
           <div
             key={s.index}

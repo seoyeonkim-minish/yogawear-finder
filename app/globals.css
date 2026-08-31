@@ -64,14 +64,6 @@ body {
   opacity: 0;
 }
 
-/* Same for the lines themselves: undrawn until the scroll draws them. Every
-   path carries pathLength="1", so one rule hides all of them before GSAP has
-   measured anything. */
-.js [data-contour],
-.js [data-line] {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-}
 
 /* Before GSAP runs, anything it will animate in stays hidden — but only when
    JS is actually going to run, so the page still reads without it. */
@@ -90,11 +82,6 @@ body {
 
   .js [data-story-copy] {
     opacity: 1;
-  }
-
-  .js [data-contour],
-  .js [data-line] {
-    stroke-dashoffset: 0;
   }
 
   .js [data-reveal],
