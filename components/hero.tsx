@@ -45,14 +45,52 @@ export function Hero({ onDiscover }: { onDiscover: () => void }) {
     return () => clearInterval(t);
   }, []);
 
+  /**
+   * Phones autoplay muted inline video and nothing else, and React does not
+   * render the `muted` attribute into the server HTML — so on iOS the element
+   * arrives unmuted, autoplay is refused, and the hero sits on its poster. The
+   * properties are set here before play() is ever asked for.
+   *
+   * play() can still be refused: Low Power Mode on iOS, a Chrome tab restored
+   * from the background, a data-saver setting. Each of those clears on the next
+   * interaction or when the tab becomes visible, so we ask again then.
+   */
+  useEffect(() => {
+    const v = video.current;
+    if (!v) return;
+
+    v.muted = true;
+    v.defaultMuted = true;
+    v.setAttribute("muted", "");
+    v.playsInline = true;
+
+    // Autoplaying footage is motion too: hold it on the poster frame.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      v.pause();
+      return;
+    }
+
+    const play = () => void v.play().catch(() => {});
+    play();
+
+    const retry = () => play();
+    const onVisible = () => {
+      if (!document.hidden) play();
+    };
+    document.addEventListener("touchstart", retry, { once: true, passive: true });
+    document.addEventListener("click", retry, { once: true });
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("touchstart", retry);
+      document.removeEventListener("click", retry);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+
   useEffect(() => {
     const el = root.current;
     if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      // Autoplaying footage is motion too: hold it on the poster frame.
-      video.current?.pause();
-      return;
-    }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let cancelled = false;
     let cleanup = () => {};
