@@ -33,7 +33,7 @@ function Annotation({ sequence }: { sequence: (typeof SEQUENCES)[number] }) {
   );
 }
 
-export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () => void }) {
+export function Hero({ onDiscover }: { onDiscover: () => void }) {
   const root = useRef<HTMLElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const [word, setWord] = useState(0);
@@ -180,24 +180,23 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
         {/* The model fills the hero. The story still happens around her. */}
       <div
         data-hero-media
-        className="pointer-events-none absolute inset-0 -z-10 bg-[#c9848c]"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[#81865c]"
       >
-        {/* Full-bleed footage, framed like the still it replaces: a wide
-            viewport crops only backdrop, phones crop the sides, so the focus
-            sits right of centre there — that is where the two of them are.
-            The poster is the still, so the first paint is never an empty box.
-            The H.264 transcode is served rather than the HEVC master: every
+        {/* Full-bleed footage. The poster is the film's own first frame, not
+            a photograph of something else — a poster from another shoot shows
+            for a beat on entry and reads as a flash of the wrong image. The
+            H.264 transcode is served rather than the HEVC master: every
             browser decodes it, and it is 1.3MB against the master's 8MB. */}
         <video
           ref={video}
-          poster={images[0]}
+          poster="/hero-yoga-poster.jpg"
           autoPlay
           muted
           loop
           playsInline
-          preload="metadata"
-          aria-label="요가복을 입은 두 모델"
-          className="h-full w-full object-cover object-[53%_55%] md:object-[50%_58%]"
+          preload="auto"
+          aria-label="요가복을 입고 움직이는 무용수"
+          className="h-full w-full object-cover object-[58%_50%] md:object-center"
         >
           <source src="/hero-yoga.h264.mp4" type="video/mp4" />
         </video>

@@ -18,7 +18,7 @@ export function HeroSection({ selection, images }: { selection: Selection; image
       {/* Sits above the hero and opens a hole in itself — the hero is already
           rendered underneath, so there is no intro screen to transition from. */}
       <Entrance />
-      <Hero images={images} onDiscover={() => setOpen(true)} />
+      <Hero onDiscover={() => setOpen(true)} />
       {open && (
         <Discovery
           selection={selection}
