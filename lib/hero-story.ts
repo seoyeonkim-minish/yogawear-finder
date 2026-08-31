@@ -29,36 +29,36 @@ export const SEQUENCES: Sequence[] = [
     index: "01",
     title: "Move with intention",
     sub: "Designed around your practice, not around a size chart.",
-    path: "M 30 40 C 38 39, 46 38, 55 37",
-    label: { x: 57, y: 31, align: "right" },
-    range: [0.18, 0.42],
+    path: "M 30 40 C 44 39, 58 38, 72 37",
+    label: { x: 74, y: 30, align: "right" },
+    range: [0.24, 0.46],
     mobile: true,
   },
   {
     index: "02",
     title: "Flex where you move",
     sub: "Flexible construction built for continuous movement.",
-    path: "M 36 56 C 46 56, 56 55, 66 54",
-    label: { x: 68, y: 48, align: "right" },
-    range: [0.38, 0.62],
+    path: "M 36 56 C 49 56, 62 55, 74 54",
+    label: { x: 76, y: 47, align: "right" },
+    range: [0.42, 0.64],
     mobile: true,
   },
   {
     index: "03",
     title: "Stability in every pose",
     sub: "Support that holds through a long, low stance.",
-    path: "M 42 74 C 52 74, 62 73, 72 72",
-    label: { x: 74, y: 66, align: "right" },
-    range: [0.58, 0.82],
+    path: "M 42 74 C 54 74, 65 73, 76 72",
+    label: { x: 78, y: 65, align: "right" },
+    range: [0.60, 0.82],
     mobile: false,
   },
   {
     index: "04",
     title: "Breathes as you move",
     sub: "Light, quick-drying fabric at the waistband and seams.",
-    path: "M 46 88 C 56 88, 66 87, 76 86",
-    label: { x: 78, y: 80, align: "right" },
-    range: [0.72, 0.94],
+    path: "M 46 88 C 57 88, 67 87, 78 86",
+    label: { x: 79, y: 79, align: "right" },
+    range: [0.74, 0.94],
     mobile: false,
   },
 ];
@@ -68,7 +68,7 @@ export const SEQUENCES: Sequence[] = [
 export const CONTOUR =
   "M 29 39 C 33 47, 35 56, 38 64 C 41 74, 43 82, 46 90";
 
-export const CONTOUR_RANGE: [number, number] = [0.08, 0.78];
+export const CONTOUR_RANGE: [number, number] = [0.16, 0.8];
 
 /** Split of each window: the line draws, then the index, then the copy. */
 export const DRAW_SHARE = 0.55;

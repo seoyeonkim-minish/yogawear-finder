@@ -5,7 +5,8 @@ const pick = (id: string, fallback: number) =>
   products.find((p) => p.id === id)?.image ?? products[fallback].image;
 
 export const HERO_IMAGES = [
-  pick("alo-yoga-16-high-waist-airlift-capri", 0),
+  // The hero cut is a supplied campaign still, not a catalogue shot.
+  "/hero-yoga.png",
   pick("29cm-부디무드라-fortune-pants-16-colors-2138961", 40),
   pick("29cm-무브웜-bar-tank-top-4026991", 80),
   pick("29cm-데비웨어-나디안-하렘팬츠-devi-b0077-네이비-2669357", 120),

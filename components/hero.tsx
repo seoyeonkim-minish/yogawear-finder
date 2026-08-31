@@ -15,19 +15,19 @@ const WORDS = ["flow.", "move.", "breathe.", "stretch."];
  * describe the body.
  *
  * Underneath that, the earlier hero behaviour is unchanged: the kinetic word,
- * the pointer parallax, the magnetic CTA, and the fabric distortion.
+ * the pointer parallax, and the magnetic CTA — now over looping footage.
  */
 function Annotation({ sequence }: { sequence: (typeof SEQUENCES)[number] }) {
   return (
     <>
-      <span data-index={sequence.index} data-story-copy className="eyebrow block text-gray">
+      <span data-index={sequence.index} data-story-copy className="eyebrow block text-ivory/70">
         ({sequence.index})
       </span>
       <div data-copy={sequence.index} className="mt-2">
-        <p data-story-copy className="text-sm uppercase tracking-[0.12em] text-charcoal">
+        <p data-story-copy className="text-sm uppercase tracking-[0.12em] text-ivory">
           {sequence.title}
         </p>
-        <p data-story-copy className="mt-1.5 text-xs leading-relaxed text-gray">{sequence.sub}</p>
+        <p data-story-copy className="mt-1.5 text-xs leading-relaxed text-ivory/70">{sequence.sub}</p>
       </div>
     </>
   );
@@ -35,6 +35,7 @@ function Annotation({ sequence }: { sequence: (typeof SEQUENCES)[number] }) {
 
 export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () => void }) {
   const root = useRef<HTMLElement>(null);
+  const video = useRef<HTMLVideoElement>(null);
   const [word, setWord] = useState(0);
 
   // Kinetic word swap. Slow on purpose — an ad banner cadence would cheapen it.
@@ -47,7 +48,11 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
   useEffect(() => {
     const el = root.current;
     if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // Autoplaying footage is motion too: hold it on the poster frame.
+      video.current?.pause();
+      return;
+    }
 
     let cancelled = false;
     let cleanup = () => {};
@@ -122,10 +127,9 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
       // The headline steps aside once the story starts, and the layers drift at
       // different rates so the scene has depth rather than one flat plane.
       story
-        .to(q("[data-hero-copy]"), { autoAlpha: 0.12, y: -40, ease: "none", duration: 0.2 }, 0.12)
+        .to(q("[data-hero-copy]"), { autoAlpha: 0, y: -60, ease: "none", duration: 0.12 }, 0.02)
         .to(q("[data-hero-media]"), { scale: 1.04, ease: "none", duration: 1 }, 0)
         .to(q("[data-hero-annotations]"), { yPercent: -4, ease: "none", duration: 1 }, 0)
-        .to(q("[data-hero-turbulence]"), { attr: { baseFrequency: 0.002 }, ease: "none", duration: 1 }, 0)
         // Everything clears before the pin releases, so the next section arrives clean.
         .to(q("[data-hero-graphics]"), { autoAlpha: 0, ease: "none", duration: 0.06 }, 0.94)
         .to(q("[data-hero-scroll]"), { autoAlpha: 0, ease: "none", duration: 0.08 }, 0.06);
@@ -173,30 +177,33 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
 
   return (
     <section ref={root} className="relative min-h-[100svh] overflow-hidden">
-      <svg aria-hidden className="absolute h-0 w-0">
-        <filter id="fabric">
-          <feTurbulence
-            data-hero-turbulence
-            type="fractalNoise"
-            baseFrequency="0.008"
-            numOctaves={2}
-            seed={7}
-          />
-          <feDisplacementMap in="SourceGraphic" scale="9" xChannelSelector="R" yChannelSelector="G" />
-        </filter>
-      </svg>
-
         {/* The model fills the hero. The story still happens around her. */}
-      <div data-hero-media className="pointer-events-none absolute inset-0 -z-10 bg-beige">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={images[0]}
-          alt="요가 동작을 하는 모델"
-          className="h-full w-full object-cover object-[52%_34%] [filter:url(#fabric)]"
-        />
+      <div
+        data-hero-media
+        className="pointer-events-none absolute inset-0 -z-10 bg-[#c9848c]"
+      >
+        {/* Full-bleed footage, framed like the still it replaces: a wide
+            viewport crops only backdrop, phones crop the sides, so the focus
+            sits right of centre there — that is where the two of them are.
+            The poster is the still, so the first paint is never an empty box.
+            The H.264 transcode is served rather than the HEVC master: every
+            browser decodes it, and it is 1.3MB against the master's 8MB. */}
+        <video
+          ref={video}
+          poster={images[0]}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-label="요가복을 입은 두 모델"
+          className="h-full w-full object-cover object-[53%_55%] md:object-[50%_58%]"
+        >
+          <source src="/hero-yoga.h264.mp4" type="video/mp4" />
+        </video>
         {/* Only over the copy: full-bleed photography and dark type do not
             coexist, and dimming the whole frame would flatten the image. */}
-        <div className="absolute inset-0 bg-gradient-to-r from-ivory via-ivory/60 to-transparent md:w-3/5 md:via-ivory/30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/45 via-ink/35 to-ink/55" />
       </div>
 
         <div data-hero-graphics className="pointer-events-none absolute inset-0 z-10">
@@ -213,9 +220,10 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
           <path
             data-contour
             d={CONTOUR}
-            stroke="var(--charcoal)"
+            pathLength={1}
+            stroke="var(--ivory)"
             strokeWidth={0.35}
-            strokeOpacity={0.35}
+            strokeOpacity={0.5}
             vectorEffect="non-scaling-stroke"
           />
           {SEQUENCES.map((s) => (
@@ -223,9 +231,10 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
               key={s.index}
               data-line={s.index}
               d={s.path}
-              stroke="var(--charcoal)"
+              pathLength={1}
+              stroke="var(--ivory)"
               strokeWidth={0.35}
-              strokeOpacity={0.45}
+              strokeOpacity={0.6}
               vectorEffect="non-scaling-stroke"
               className={s.mobile ? undefined : "hidden md:block"}
             />
@@ -236,7 +245,7 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
         {SEQUENCES.map((s) => (
           <div
             key={s.index}
-            className={`absolute hidden w-[30%] max-w-[16rem] md:block ${
+            className={`absolute hidden w-[20%] max-w-[13rem] md:block ${
               s.label.align === "right" ? "text-left" : "text-right"
             }`}
             style={{ left: `${s.label.x}%`, top: `${s.label.y}%` }}
@@ -256,12 +265,12 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
         </div>
       </div>
 
-      <div className="relative mx-auto flex min-h-[100svh] w-full max-w-7xl flex-col px-6 py-16 md:px-10">
-        <div data-hero-copy className="relative z-20 max-w-lg">
-          <p className="eyebrow text-gray" data-reveal data-immediate data-delay="0.2">
+      <div className="relative mx-auto flex min-h-[100svh] w-full max-w-7xl flex-col justify-center px-6 py-16 md:px-10">
+        <div data-hero-copy className="relative z-20 max-w-3xl">
+          <p className="eyebrow text-ivory/70" data-reveal data-immediate data-delay="0.2">
             Yogawear Index — Amadi
           </p>
-          <h1 className="display mt-5 text-[clamp(2.75rem,7vw,5.5rem)] leading-[0.95]">
+          <h1 className="display mt-5 text-[clamp(3.25rem,9vw,7.5rem)] leading-[0.95] text-ivory">
             <span className="block" data-split data-immediate data-delay="0.35">
               Find your
             </span>
@@ -278,7 +287,7 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
               ))}
             </span>
           </h1>
-          <p className="mt-6 max-w-sm text-sm leading-relaxed text-gray" data-reveal data-immediate data-delay="0.9">
+          <p className="mt-8 max-w-md text-base leading-relaxed text-ivory/85 md:text-lg" data-reveal data-immediate data-delay="0.9">
             Yoga wear that moves with who you are.
           </p>
           <button
@@ -287,14 +296,14 @@ export function Hero({ images, onDiscover }: { images: string[]; onDiscover: () 
             data-immediate
             data-delay="1.1"
             onClick={onDiscover}
-            className="mt-8 rounded-full bg-charcoal px-8 py-4 text-sm text-ivory transition-colors hover:bg-ink"
+            className="mt-10 rounded-full border border-ivory/60 bg-ink/45 px-12 py-5 text-base text-ivory backdrop-blur-sm transition-colors hover:bg-ink/70"
           >
             Discover my flow
           </button>
         </div>
 
         <div data-hero-scroll className="pointer-events-none absolute bottom-8 left-1/2 -translate-x-1/2">
-          <span className="eyebrow text-gray-soft">Scroll</span>
+          <span className="eyebrow text-ivory/60">Scroll</span>
         </div>
       </div>
     </section>
