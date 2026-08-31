@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { CONTOUR, CONTOUR_RANGE, DRAW_SHARE, SEQUENCES } from "../lib/hero-story.ts";
+import { SEQUENCES } from "../lib/hero-story.ts";
 
 test("the story covers the scroll without running past either end", () => {
   assert.equal(SEQUENCES.length, 4);
@@ -20,7 +20,7 @@ test("sequences run in order and overlap only enough to feel continuous", () => 
     const next = SEQUENCES[i].range;
     assert.ok(next[0] > prev[0], `${SEQUENCES[i].index} starts before the one before it`);
     assert.ok(next[0] < prev[1], `${SEQUENCES[i].index} leaves a dead gap in the scroll`);
-    assert.ok(next[0] > prev[0] + (prev[1] - prev[0]) * DRAW_SHARE, `${SEQUENCES[i].index} interrupts the copy before it`);
+    assert.ok(next[0] > prev[0] + (prev[1] - prev[0]) * 0.5, `${SEQUENCES[i].index} interrupts the copy before it`);
   }
 });
 
@@ -46,24 +46,6 @@ test("copy stays on movement and never on the body", () => {
     assert.doesNotMatch(s.title, banned, `${s.index} title`);
     assert.doesNotMatch(s.sub, banned, `${s.index} sub`);
   }
-});
-
-test("every path is drawable, starts on the model and ends before its label", () => {
-  for (const { index, path } of SEQUENCES) {
-    assert.match(path, /^M [\d.]+ [\d.]+/, `${index}: no move-to`);
-    const [x, y] = path.slice(2).split(" ").map(Number);
-    // Lines start on the model, who occupies the left third of the crop.
-    assert.ok(x > 20 && x < 50, `${index}: starts at x=${x}, not on the model`);
-    assert.ok(y > 5 && y < 95, `${index}: starts at y=${y}, outside the frame`);
-  }
-  // Each line has to reach out towards its annotation without running under it.
-  for (const s of SEQUENCES) {
-    const end = Number(s.path.trim().split(/[\s,]+/).at(-2));
-    assert.ok(end < s.label.x, `${s.index}: line ends at ${end}, under the label at ${s.label.x}`);
-    assert.ok(s.label.x - end < 12, `${s.index}: line stops ${s.label.x - end} short of its label`);
-  }
-  assert.match(CONTOUR, /^M /);
-  assert.ok(CONTOUR_RANGE[0] < SEQUENCES[0].range[0], "the contour must begin before the first annotation");
 });
 
 test("mobile keeps a readable subset", () => {

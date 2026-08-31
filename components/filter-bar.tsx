@@ -10,6 +10,9 @@ import {
  *
  * The row wraps rather than scrolls: an overflow container clips the popovers
  * that open below it, which left every option list unreachable.
+ *
+ * They share a `name`, so the browser closes the open one when another is
+ * opened — an exclusive accordion with no state to keep in sync.
  */
 function Popover({
   selection,
@@ -24,7 +27,7 @@ function Popover({
 }) {
   const n = selection[k]?.length ?? 0;
   return (
-    <details className="group relative shrink-0">
+    <details name="filter" className="group relative shrink-0">
       <summary
         className={`flex cursor-pointer list-none items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
           n
