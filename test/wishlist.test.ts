@@ -60,3 +60,13 @@ test("corrupt storage is treated as empty rather than throwing", () => {
   storage.setItem(wishlistStorageKey, '["ok", 42, null]');
   assert.deepEqual(readWishlist(), ["ok"], "non-string ids are dropped");
 });
+
+/**
+ * The account sync filters removals with PostgREST's `not.in.("a","b")`, which
+ * has no escaping — an id carrying a quote or a comma would silently delete the
+ * wrong rows. The crawler decides these ids, so the guard belongs here.
+ */
+test("product ids stay safe to interpolate into a PostgREST filter", () => {
+  const bad = products.filter((p) => /["(),\\]/.test(p.id));
+  assert.deepEqual(bad.map((p) => p.id), [], "an id would break the wishlist delete filter");
+});

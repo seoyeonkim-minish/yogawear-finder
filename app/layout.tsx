@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Noto_Sans_KR } from "next/font/google";
 import { MotionProvider } from "@/components/motion";
 import { Toaster } from "@/components/toast";
+import { AccountLink } from "@/components/account-link";
 import { WishlistLink } from "@/components/wishlist-link";
 import "./globals.css";
 
@@ -27,9 +28,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko" className={`${display.variable} ${sans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans font-light">
-        {/* The only persistent chrome on the site: a utility link that floats
-            over whatever is beneath it, so no section's layout changes. */}
-        <WishlistLink />
+        {/* The only persistent chrome on the site: utility controls that float
+            over whatever is beneath them, so no section's layout changes. */}
+        <div className="fixed right-6 top-6 z-40 flex items-center gap-2 md:right-10">
+          <WishlistLink />
+          <AccountLink />
+        </div>
         <MotionProvider>{children}</MotionProvider>
         <Toaster />
       </body>
