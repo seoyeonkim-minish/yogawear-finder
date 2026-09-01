@@ -16,3 +16,12 @@ create policy "own rows only" on public.wishlist
   for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- RLS decides WHICH rows a request may touch; a table grant decides whether it
+-- may touch the table at all. They are two separate layers, and a table created
+-- from the SQL editor gets no grant of its own — without this every request came
+-- back 403 even with the policy in place.
+--
+-- `anon` is deliberately given nothing: a signed-out visitor's wishlist lives in
+-- localStorage and never reaches Postgres.
+grant select, insert, update, delete on public.wishlist to authenticated;

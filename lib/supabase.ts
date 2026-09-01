@@ -8,4 +8,12 @@ const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
  * checks for null first, so the site — wishlist included — keeps working with
  * no Supabase project at all, and the existing tests keep running in Node.
  */
-export const supabase = url && key ? createClient(url, key) : null;
+export const supabase =
+  url && key
+    ? createClient(url, key, {
+        // PKCE keeps the access token out of the URL — the implicit flow returns
+        // it in the fragment, where it lands in browser history and collides
+        // with any anchor the page already had.
+        auth: { flowType: "pkce" },
+      })
+    : null;

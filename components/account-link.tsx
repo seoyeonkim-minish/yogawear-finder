@@ -4,17 +4,17 @@ import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
-const PROVIDERS = [
-  { id: "google", label: "Google" },
-  { id: "kakao", label: "카카오" },
-] as const;
-
 const pill =
   "flex items-center gap-2 rounded-full bg-ivory/80 px-4 py-2 text-xs text-charcoal backdrop-blur transition hover:bg-ivory";
 
 /**
  * The account control, sized to match the wishlist link beside it — signing in
  * is a utility here, not a gate, so it never grows louder than the catalogue.
+ *
+ * Google is the only provider. Kakao was set up and then removed: Supabase
+ * always asks Kakao for `account_email`, and that scope is locked behind a
+ * business account, so every attempt came back KOE205. A second provider brings
+ * back the menu this file used to carry.
  */
 export function AccountLink() {
   const [user, setUser] = useState<User | null>(null);
@@ -34,51 +34,48 @@ export function AccountLink() {
   const client = supabase;
   if (!client) return null;
 
-  const signIn = (provider: (typeof PROVIDERS)[number]["id"]) =>
-    client.auth.signInWithOAuth({
-      provider,
-      // Back to the page you left, wishlist and all.
-      options: { redirectTo: window.location.href },
-    });
+  if (!user) {
+    return (
+      <button
+        className={pill}
+        onClick={() =>
+          client.auth.signInWithOAuth({
+            provider: "google",
+            // Back to the page you left, wishlist and all — but without its
+            // hash. `href` keeps the anchor, and the redirect appends its own
+            // fragment behind it, which parses as neither.
+            options: { redirectTo: pageUrl() },
+          })
+        }
+      >
+        <span className="eyebrow">Sign in</span>
+      </button>
+    );
+  }
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className={pill}
-      >
-        <span className="eyebrow">{user ? name(user) : "Sign in"}</span>
+      <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className={pill}>
+        <span className="eyebrow">{name(user)}</span>
       </button>
-
       {open && (
-        <div
-          // ponytail: closes on choose or on the next auth change, not on an
+        <button
+          // ponytail: closes on sign-out or the next auth change, not on an
           // outside click. Add a listener if it ever actually annoys anyone.
-          className="absolute right-0 mt-2 flex w-36 flex-col overflow-hidden rounded-2xl bg-ivory/95 py-1 text-xs text-charcoal shadow-lg backdrop-blur"
+          className="absolute right-0 mt-2 w-28 rounded-2xl bg-ivory/95 px-4 py-2 text-left text-xs text-charcoal shadow-lg backdrop-blur transition hover:bg-ivory"
+          onClick={() => client.auth.signOut()}
         >
-          {user ? (
-            <button
-              className="px-4 py-2 text-left transition hover:bg-charcoal/5"
-              onClick={() => client.auth.signOut()}
-            >
-              로그아웃
-            </button>
-          ) : (
-            PROVIDERS.map((p) => (
-              <button
-                key={p.id}
-                className="px-4 py-2 text-left transition hover:bg-charcoal/5"
-                onClick={() => signIn(p.id)}
-              >
-                {p.label}로 계속하기
-              </button>
-            ))
-          )}
-        </div>
+          로그아웃
+        </button>
       )}
     </div>
   );
+}
+
+/** The current page, minus any anchor the visitor happens to be parked on. */
+function pageUrl() {
+  const { origin, pathname, search } = window.location;
+  return origin + pathname + search;
 }
 
 /** Whatever the provider gave us, shortened to something that fits the pill. */
